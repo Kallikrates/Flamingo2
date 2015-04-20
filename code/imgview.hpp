@@ -1,0 +1,52 @@
+#ifndef IMGVIEW_HPP
+#define IMGVIEW_HPP
+
+#include <QWidget>
+#include <QPixmap>
+#include <QImage>
+#include <QTimer>
+
+class ImageView : public QWidget {
+	Q_OBJECT
+public:
+	enum ZKEEP {KEEP_NONE, KEEP_FIT, KEEP_FIT_FORCE, KEEP_EXPANDED, KEEP_EQUAL};
+	ImageView(QWidget *parent = 0, QImage image = QImage(0, 0));
+	QSize sizeHint() const;
+	void paintEvent(QPaintEvent*);
+	void resizeEvent(QResizeEvent *);
+	void wheelEvent(QWheelEvent *);
+	void mousePressEvent(QMouseEvent *);
+	void mouseReleaseEvent(QMouseEvent *);
+	void mouseMoveEvent(QMouseEvent *);
+	QImage getImage() {return view;}
+	ZKEEP getKeepState() {return keep;}
+public slots:
+	void setImage(QImage, ZKEEP keepStart = KEEP_FIT);
+	void setKeepState(ZKEEP z) {keep = z; this->repaint();}
+protected slots:
+	void centerView();
+private slots:
+	void hideMouse() {this->setCursor(Qt::BlankCursor);}
+	void showMouse() {this->setCursor(Qt::ArrowCursor); mouseHider->start(500);}
+private: //Variables
+	QImage view;
+	float zoom = 1.0f;
+	QRect partRect;
+	static float constexpr zoomMin = 0.025f;
+	float zoomMax = 0.0f;
+	float zoomExp = 0.0f;
+	float zoomFit = 0.0f;
+	ZKEEP keep;
+	QPointF viewOffset = QPointF(0, 0);
+	QPoint prevMPos;
+	bool mouseMoving = false;
+	bool paintCompletePartial = false;
+	QPointF focalPoint;
+	QTimer *mouseHider = new QTimer(this);
+private: //Methods
+	void setZoom(qreal, QPointF focus = QPointF(0, 0));
+	void calculateZoomLevels();
+	void calculateView();
+};
+
+#endif // IMGVIEW_HPP
