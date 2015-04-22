@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 2.8.11)
 
 set(ProjectName "Flamingo2" CACHE STRING "Project Name")
 project(${ProjectName})
@@ -35,6 +35,4 @@ add_executable(${ProjectBinary} ${ProjectFiles})
 install(TARGETS ${ProjectBinary} RUNTIME DESTINATION ".")
 set_target_properties(${ProjectBinary} PROPERTIES INCLUDE_DIRECTORIES ${ProjectIncludeDirectories})
 set_target_properties(${ProjectBinary} PROPERTIES PROJECT_LABEL "${ProjectName}")
-target_link_libraries(${ProjectBinary} ${GLTest1Libs})
-
-qt5_use_modules(${ProjectBinary} Widgets)
+target_link_libraries(${ProjectBinary} ${ProjectLibs} Qt5::Widgets)
