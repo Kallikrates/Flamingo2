@@ -1,13 +1,13 @@
 #include "mainwindow.hpp"
 #include "imgview.hpp"
 
-MainWindow::MainWindow() : QWidget(0) {
+MainWindow::MainWindow(QStringList arguments) : QWidget(0) {
 	layout = new QGridLayout(this);
 	layout->setMargin(0);
 	view = new ImageView(this);
 	layout->addWidget(view);
-	provider = new PreloadingWeightedCategoryImageProvider();
-	QObject::connect(provider, SIGNAL(Loaded(QImage)), view, SLOT(setImage(QImage)));
+	provider = new PreloadingWeightedCategoryImageProvider(arguments);
+	QObject::connect(provider, SIGNAL(Loaded(QImage)), this, SLOT(handleImage(QImage)));
 	provider->Current();
 }
 
@@ -38,4 +38,9 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 	default:
 		return;
 	}
+}
+
+void MainWindow::handleImage(QImage img) {
+	this->setWindowTitle("f2: "+provider->CurrentName());
+	view->setImage(img);
 }

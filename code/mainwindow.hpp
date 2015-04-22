@@ -11,10 +11,12 @@ class ImageView;
 class MainWindow : public QWidget {
 	Q_OBJECT
 public:
-	MainWindow();
+	MainWindow(QStringList arguments);
 	virtual ~MainWindow();
 protected:
 	virtual void keyPressEvent(QKeyEvent *);
+protected slots:
+	void handleImage(QImage);
 private:
 	QGridLayout * layout = nullptr;
 	ImageView * view = nullptr;

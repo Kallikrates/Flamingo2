@@ -2,7 +2,7 @@
 #include "mainwindow.hpp"
 
 Core::Core(int &argc, char **&argv) : QApplication(argc, argv) {
-	window = new MainWindow();
+	window = new MainWindow(this->arguments());
 	window->show();
 }
 
@@ -11,6 +11,7 @@ Core::~Core() {
 }
 
 int main (int argc, char * * argv) {
+	qsrand(time(NULL));
 	Core C {argc, argv};
 	return C.exec();
 }
