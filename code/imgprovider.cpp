@@ -41,15 +41,22 @@ PreloadingWeightedCategoryImageProvider::PreloadingWeightedCategoryImageProvider
 		}
 	}
 	if (!args.getReqStart().isNull()) this->Seek(args.getReqStart());
+
 	workClock = new QTimer(this);
 	QObject::connect(workClock, SIGNAL(timeout()), this, SLOT(workTick()));
 	workClock->setSingleShot(false);
 	workClock->start(25);
+
+	clearClock = new QTimer(this);
+	QObject::connect(clearClock, SIGNAL(timeout()), this, SLOT(clearTick()));
+	clearClock->setSingleShot(false);
+	clearClock->start(500);
 }
 
 PreloadingWeightedCategoryImageProvider::~PreloadingWeightedCategoryImageProvider() {
 	workLock.lock();
 	workClock->stop();
+	clearClock->stop();
 	workLock.unlock();
 	for (IETL * ietl : loaders) {
 		if (ietl->thread->joinable()) ietl->thread->join();
@@ -57,6 +64,7 @@ PreloadingWeightedCategoryImageProvider::~PreloadingWeightedCategoryImageProvide
 		delete ietl;
 	}
 	delete workClock;
+	delete clearClock;
 }
 
 static const QString nullStr {};
@@ -64,8 +72,9 @@ static const QString nullStr {};
 QString const & PreloadingWeightedCategoryImageProvider::CurrentName() {
 	if (cats.length() == 0) return nullStr;
 	indexLock.lock();
-	return getCurrentEntry()->path;
+	QString const & str = getCurrentEntry()->path;
 	indexLock.unlock();
+	return str;
 }
 
 void PreloadingWeightedCategoryImageProvider::Current() {
@@ -184,8 +193,8 @@ void PreloadingWeightedCategoryImageProvider::loadrun(IETL * me) {
 	if (img.isNull()) this->Remove(entry->path);
 	workLock.lock();
 	entry->img = img;
-	me->finished = true;
 	workLock.unlock();
+	me->finished = true;
 }
 
 void PreloadingWeightedCategoryImageProvider::peekIndex(unsigned int & cinout, unsigned int & linout, int delta) {
@@ -325,14 +334,24 @@ void PreloadingWeightedCategoryImageProvider::workTick() {
 				}
 			}
 		}
-		for (unsigned int c = 0; c < (unsigned int)cats.length(); c++) {
-			for (unsigned int l = 0; l < (unsigned int)cats[c].entries.length(); l++) {
-				bool unload = true;
-				for (PreloadSet p : preloads) if (p.cindex == c && p.lindex == l) unload = false;
-				if (unload) cats[c].entries[l]->img = nullImg;
+	}
+	indexLock.unlock();
+	workLock.unlock();
+}
+
+void PreloadingWeightedCategoryImageProvider::clearTick() {
+	workLock.lock();
+	indexLock.lock();
+	for (unsigned int c = 0; c < (unsigned int)cats.length(); c++) {
+		CatEntry const & cent = cats.at(c);
+		unsigned int llen = (unsigned int)cent.entries.length();
+		for (unsigned int l = 0; l < llen; l++) {
+			bool unload = true;
+			for (PreloadSet p : preloads) if (p.cindex == c && p.lindex == l) unload = false;
+			if (unload && !cent.entries[l]->img.isNull()) {
+				cent.entries[l]->img = nullImg;
 			}
 		}
-
 	}
 	indexLock.unlock();
 	workLock.unlock();

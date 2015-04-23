@@ -58,6 +58,7 @@ private:
 	unsigned int lindex {0};
 	Navdir navdir {Navdir::Neutral};
 	QTimer * workClock = nullptr;
+	QTimer * clearClock = nullptr;
 	std::recursive_mutex workLock;
 	std::recursive_mutex indexLock;
 	struct PreloadSet {unsigned int cindex; unsigned int lindex;};
@@ -73,6 +74,7 @@ private:
 	inline void providerArgDirRecursor(QDir from, QList<QString> & paths);
 private slots:
 	void workTick();
+	void clearTick();
 };
 
 #endif //IMGPROVIDER_HPP

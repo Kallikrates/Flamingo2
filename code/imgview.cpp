@@ -7,6 +7,14 @@ ImageView::ImageView(QWidget *parent, QImage image) : QWidget(parent), view(imag
 	QObject::connect(mouseHider, SIGNAL(timeout()), this, SLOT(hideMouse()));
 	this->setMouseTracking(true);
 	this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+	bilWorker = new std::thread(&ImageView::bilRun, this);
+}
+
+ImageView::~ImageView() {
+	bilGood.store(false);
+	if (bilWorker->joinable()) bilWorker->join();
+	delete bilWorker;
 }
 
 QSize ImageView::sizeHint() const {
@@ -16,9 +24,11 @@ QSize ImageView::sizeHint() const {
 void ImageView::paintEvent(QPaintEvent *QPE) {
 	QPainter paint(this);
 	paint.fillRect(QPE->rect(), QBrush(QColor(0, 0, 0)));
+	viewLock.read_lock();
 	if (this->width() > 0 && this->height() > 0 && view.width() > 0 && view.height() > 0) {
 		this->calculateView();
 		QSize drawSize;
+		drawLock.read_lock();
 		if (paintCompletePartial) {
 			drawSize = this->size();
 		} else if ((partRect.width() < this->width() && partRect.height() < this->height())) {
@@ -26,12 +36,16 @@ void ImageView::paintEvent(QPaintEvent *QPE) {
 		} else {
 			drawSize = partRect.size().scaled(this->size(), Qt::KeepAspectRatio);
 		}
-		QRect drawRect;
+		drawLock.read_unlock();
+		drawLock.write_lock();
 		drawRect.setX((int)((this->width() - drawSize.width()) / 2.0f));
 		drawRect.setY((int)((this->height() - drawSize.height()) / 2.0f));
 		drawRect.setSize(drawSize);
-		paint.drawImage(drawRect, view, partRect);
+		if (drawRect == bilDraw && partRect == bilPart && view == bilCompare) paint.drawImage(drawRect, bilRaster);
+		else paint.drawImage(drawRect, view, partRect);
+		drawLock.write_unlock();
 	}
+	viewLock.read_unlock();
 	QWidget::paintEvent(QPE);
 }
 
@@ -89,9 +103,13 @@ void ImageView::mouseMoveEvent(QMouseEvent *QME) {
 }
 
 void ImageView::setImage(QImage newView, ZKEEP keepStart) {
-	this->view = newView;
 	this->keep = keepStart;
-	this->repaint();
+	viewLock.write_lock();
+	if (this->view != newView) {
+		this->view = newView;
+		viewLock.write_unlock();
+		this->repaint();
+	} else viewLock.write_unlock();
 }
 
 void ImageView::setZoom(qreal nZoom, QPointF focus) {
@@ -196,5 +214,41 @@ void ImageView::calculateView() {
 	if (viewOffset.y() < 0) {
 		viewOffset.setY(0);
 	}
+	drawLock.write_lock();
 	partRect = QRect(viewOffset.toPoint(), partSize);
+	drawLock.write_unlock();
+}
+
+void ImageView::bilRun() {
+	while(bilGood) {
+		bool doBil = false;
+		viewLock.read_lock();
+		drawLock.read_lock();
+		if (bilPart != partRect || bilDraw != drawRect || bilCompare != view) doBil = true;
+		drawLock.read_unlock();
+		viewLock.read_unlock();
+		if (doBil) {
+			emit bilProc();
+			viewLock.read_lock();
+			QImage rCompare = view;
+			drawLock.read_lock();
+			QRect rPart = partRect;
+			QRect rDraw = drawRect;
+			drawLock.read_unlock();
+			QImage raster = view.copy(rPart);
+			QSize rSize = rDraw.size();
+			viewLock.read_unlock();
+			raster = raster.scaled(rSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+			drawLock.write_lock();
+			bilRaster = raster;
+			bilPart = rPart;
+			bilDraw = rDraw;
+			bilCompare = rCompare;
+			drawLock.write_unlock();
+			this->update();
+			emit bilComplete();
+		} else {
+			std::this_thread::sleep_for(std::chrono::milliseconds(25));
+		}
+	}
 }

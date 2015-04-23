@@ -5,12 +5,18 @@
 #include <QPixmap>
 #include <QImage>
 #include <QTimer>
+#include <atomic>
+#include <thread>
+#include <mutex>
+
+#include "rwmutex.hpp"
 
 class ImageView : public QWidget {
 	Q_OBJECT
 public:
 	enum ZKEEP {KEEP_NONE, KEEP_FIT, KEEP_FIT_FORCE, KEEP_EXPANDED, KEEP_EQUAL};
 	ImageView(QWidget *parent = 0, QImage image = QImage(0, 0));
+	virtual ~ImageView();
 	QSize sizeHint() const;
 	void paintEvent(QPaintEvent*);
 	void resizeEvent(QResizeEvent *);
@@ -32,6 +38,7 @@ private: //Variables
 	QImage view;
 	float zoom = 1.0f;
 	QRect partRect;
+	QRect drawRect;
 	static float constexpr zoomMin = 0.025f;
 	float zoomMax = 0.0f;
 	float zoomExp = 0.0f;
@@ -47,6 +54,19 @@ private: //Methods
 	void setZoom(qreal, QPointF focus = QPointF(0, 0));
 	void calculateZoomLevels();
 	void calculateView();
+private: //Bilinear
+	std::atomic_bool bilGood {true};
+	std::thread * bilWorker = nullptr;
+	rwmutex viewLock;
+	rwmutex drawLock;
+	QImage bilCompare;
+	QRect bilPart;
+	QRect bilDraw;
+	QImage bilRaster;
+	void bilRun();
+signals:
+	void bilComplete();
+	void bilProc();
 };
 
 #endif // IMGVIEW_HPP
