@@ -13,15 +13,15 @@ Overlayer::Overlayer(QWidget * parent) : QWidget(parent) {
 	this->setPalette(Qt::transparent);
 	this->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-	flickerer = new QTimer(this);
-	flickerer->setSingleShot(false);
-	QObject::connect(flickerer, SIGNAL(timeout()), this, SLOT(manageFlicker()));
-	flickerer->start(25);
+	elementClock = new QTimer(this);
+	elementClock->setSingleShot(false);
+	QObject::connect(elementClock, SIGNAL(timeout()), this, SLOT(manageElements()));
+	elementClock->start(25);
 }
 
 Overlayer::~Overlayer() {
-	flickerer->stop();
-	delete flickerer;
+	elementClock->stop();
+	delete elementClock;
 }
 
 void Overlayer::setFlicker(Flicker f, bool b) {
@@ -39,25 +39,48 @@ void Overlayer::setFlicker(Flicker f, bool b) {
 	}
 }
 
+void Overlayer::setNotification(QString str, int duration) {
+	notifText = str;
+	notifValue = duration;
+}
+
+void Overlayer::setIndicatorsEnabled(bool b) {
+	this->indicatorsEnabled = b;
+}
+
+bool Overlayer::getIndicatorsEnabled() {
+	return this->indicatorsEnabled;
+}
+
 void Overlayer::paintEvent(QPaintEvent *QPE) {
 	QPE->accept();
 	QPainter paint {this};
 	paint.setPen(Qt::NoPen);
+	paint.setCompositionMode(QPainter::CompositionMode_Difference);
 	if (loadFlickerS) {
-		QBrush lb {QColor(255, 0, 0, loadFlickerV), Qt::SolidPattern};
+		QBrush lb {QColor(255, 0, 127, indicatorsEnabled ? loadFlickerV : 0), Qt::SolidPattern};
 		paint.setBrush(lb);
-		paint.drawRect(indOffs, this->height() - (indOffs + indSize), indSize, indSize);
+		paint.drawRect(indOffs, indOffs, indSize, indSize);
 	}
 	if (bilFlickerS) {
-		QBrush lb {QColor(0, 255, 0, bilFlickerV), Qt::SolidPattern};
+		QBrush lb {QColor(0, 255, 127, indicatorsEnabled ? bilFlickerV : 0), Qt::SolidPattern};
 		paint.setBrush(lb);
-		paint.drawRect(indOffs + (indOffs + indSize), this->height() - (indOffs + indSize), indSize, indSize);
+		paint.drawRect(indOffs + (indOffs + indSize), indOffs, indSize, indSize);
+	}
+	if (notifValue) {
+		int bv = notifValue * 16;
+		byteConstrain(bv);
+		paint.setPen(QColor(255, 255, 255, bv));
+		paint.setFont(QFont("Monospace", 8, QFont::Bold));
+		paint.drawText(this->rect().adjusted(indOffs, 0, 0, -indOffs), Qt::AlignBottom | Qt::AlignLeft, notifText);
 	}
 }
 
 static int flm = 255 / 4;
 
-void Overlayer::manageFlicker() {
+void Overlayer::manageElements() {
+	bool doRepaint = false;
+
 	switch (loadFlickerS) {
 	case 0:
 		break;
@@ -90,5 +113,9 @@ void Overlayer::manageFlicker() {
 	}
 	byteConstrain(bilFlickerV);
 
-	this->repaint();
+	if (notifValue >= 0) notifValue--;
+
+	if (loadFlickerS || bilFlickerS) doRepaint = true;
+	else if (notifValue >= 0) doRepaint = true;
+	if (doRepaint) this->repaint();
 }

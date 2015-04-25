@@ -6,9 +6,11 @@
 #include <QDir>
 #include <QFileInfo>
 
+enum class Recurse {NoRecur, SingleCat, MultiCat};
+
 struct ProviderArg {
 	QFileInfo path;
-	bool recurse;
+	Recurse recurse;
 	float weight;
 };
 

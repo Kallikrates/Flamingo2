@@ -16,23 +16,46 @@ inline void PreloadingWeightedCategoryImageProvider::providerArgDirRecursor(QDir
 PreloadingWeightedCategoryImageProvider::PreloadingWeightedCategoryImageProvider(ProviderArgs const & args) : AsyncImageProvider(0) {
 	for (ProviderArg const & arg : args.getArgs()) {
 		if (arg.path.isDir()) {
-			if (arg.recurse) {
-				QList<QString> paths;
-				providerArgDirRecursor(QDir(arg.path.canonicalFilePath()), paths);
-				if (paths.length() > 0) {
-					QList<std::shared_ptr<ImgEntry>> imgs;
-					for (QString str : paths) {
-						imgs.append(std::shared_ptr<ImgEntry> (new ImgEntry {str, QImage {0, 0, QImage::Format_Mono}}));
-					}
-					cats.append({arg.path.canonicalFilePath(), arg.weight, imgs});
-				}
-			} else {
+			switch (arg.recurse) {
+			case Recurse::NoRecur:
+			{
 				QFileInfoList qfil = QDir(arg.path.canonicalFilePath()).entryInfoList(QDir::Files);
 				QList<std::shared_ptr<ImgEntry>> imgs;
 				for (QFileInfo & fi : qfil) {
 					imgs.append(std::shared_ptr<ImgEntry> (new ImgEntry {fi.canonicalFilePath(), nullImg}));
 				}
 				if (imgs.length() > 0) cats.append({arg.path.canonicalFilePath(), arg.weight, imgs});
+			}
+				break;
+			case Recurse::SingleCat:
+			{
+				QList<QString> paths;
+				providerArgDirRecursor(QDir(arg.path.canonicalFilePath()), paths);
+				if (paths.length() > 0) {
+					QList<std::shared_ptr<ImgEntry>> imgs;
+					for (QString str : paths) {
+						imgs.append(std::shared_ptr<ImgEntry> (new ImgEntry {str, nullImg}));
+					}
+					cats.append({arg.path.canonicalFilePath(), arg.weight, imgs});
+				}
+			}
+				break;
+			case Recurse::MultiCat:
+			{
+				QFileInfoList dirs = QDir(arg.path.canonicalFilePath()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+				for (QFileInfo dir : dirs) {
+					QList<QString> paths;
+					providerArgDirRecursor(QDir(dir.canonicalFilePath()), paths);
+					if (paths.length() > 0) {
+						QList<std::shared_ptr<ImgEntry>> imgs;
+						for (QString str : paths) {
+							imgs.append(std::shared_ptr<ImgEntry> (new ImgEntry {str, nullImg}));
+						}
+						cats.append({dir.canonicalFilePath(), arg.weight, imgs});
+				}
+				}
+			}
+				break;
 			}
 		} else if (arg.path.isFile()) {
 			qDebug() << "TODO: Files";
@@ -46,17 +69,11 @@ PreloadingWeightedCategoryImageProvider::PreloadingWeightedCategoryImageProvider
 	QObject::connect(workClock, SIGNAL(timeout()), this, SLOT(workTick()));
 	workClock->setSingleShot(false);
 	workClock->start(25);
-
-	clearClock = new QTimer(this);
-	QObject::connect(clearClock, SIGNAL(timeout()), this, SLOT(clearTick()));
-	clearClock->setSingleShot(false);
-	clearClock->start(500);
 }
 
 PreloadingWeightedCategoryImageProvider::~PreloadingWeightedCategoryImageProvider() {
 	workLock.lock();
 	workClock->stop();
-	clearClock->stop();
 	workLock.unlock();
 	for (IETL * ietl : loaders) {
 		if (ietl->thread->joinable()) ietl->thread->join();
@@ -64,7 +81,6 @@ PreloadingWeightedCategoryImageProvider::~PreloadingWeightedCategoryImageProvide
 		delete ietl;
 	}
 	delete workClock;
-	delete clearClock;
 }
 
 static const QString nullStr {};
@@ -106,13 +122,12 @@ void PreloadingWeightedCategoryImageProvider::Random() {
 	if (navdir != Navdir::Random) {
 		this->resetRandom();
 		navdir = Navdir::Random;
-	} else {
-		PreloadSet p = this->advanceRandom();
-		indexLock.lock();
-		cindex = p.cindex;
-		lindex = p.lindex;
-		indexLock.unlock();
 	}
+	PreloadSet p = this->advanceRandom();
+	indexLock.lock();
+	cindex = p.cindex;
+	lindex = p.lindex;
+	indexLock.unlock();
 	Current();
 }
 
@@ -130,7 +145,7 @@ void PreloadingWeightedCategoryImageProvider::Remove() {
 		this->peekIndex(cindex, lindex, -1);
 		break;
 	case Navdir::Random:
-		this->resetRandom();
+		validateRandom();
 		break;
 	}
 	Current();
@@ -152,12 +167,10 @@ void PreloadingWeightedCategoryImageProvider::Remove(QString str) {
 				if (c == cindex && l == lindex) Remove();
 				else {
 					cats[c].entries.removeAt(l);
-					if (l < lindex) lindex--;
-					if (cats[cindex].entries.length() == 0) cats.removeAt(cindex);
+					if (l < lindex && c == cindex) lindex--;
+					if (cats[c].entries.length() == 0) cats.removeAt(c);
 					this->peekIndex(cindex, lindex);
-					if (navdir == Navdir::Random) {
-						this->resetRandom();
-					}
+					validateRandom();
 				}
 				break;
 			}
@@ -193,8 +206,23 @@ void PreloadingWeightedCategoryImageProvider::loadrun(IETL * me) {
 	if (img.isNull()) this->Remove(entry->path);
 	workLock.lock();
 	entry->img = img;
+	loaded.append(me->entry);
 	workLock.unlock();
 	me->finished = true;
+}
+
+bool PreloadingWeightedCategoryImageProvider::indexIsValid(unsigned int c, unsigned int l) {
+	if (cats.length() == 0) return false;
+	if (c >= (unsigned int)cats.length()) return false;
+	if (l >= (unsigned int)cats[c].entries.length()) return false;
+	return true;
+}
+
+void PreloadingWeightedCategoryImageProvider::validateRandom() {
+	if (navdir != Navdir::Random) return;
+	for (PreloadSet & p : preloads) {
+		if (!indexIsValid(p.cindex, p.lindex)) p = generateRandomPreload();
+	}
 }
 
 void PreloadingWeightedCategoryImageProvider::peekIndex(unsigned int & cinout, unsigned int & linout, int delta) {
@@ -228,6 +256,8 @@ void PreloadingWeightedCategoryImageProvider::peekIndex(unsigned int & cinout, u
 }
 
 inline PreloadingWeightedCategoryImageProvider::PreloadSet PreloadingWeightedCategoryImageProvider::generateRandomPreload() {
+	qsrand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+	indexLock.lock();
 	if (cats.length() == 0) return {0, 0};
 	unsigned int cdx = 0;
 	if (cats.length() > 1) {
@@ -235,20 +265,20 @@ inline PreloadingWeightedCategoryImageProvider::PreloadSet PreloadingWeightedCat
 		for (CatEntry & cat : cats) sum += cat.weight;
 		float value = (qrand() / (float)RAND_MAX) * sum;
 		cdx = cats.length();
-		while (value > 0 && cdx-- > 0) {
+		while (value > 0 && --cdx > 0) {
 			value -= cats[cdx].weight;
 		}
 	}
-	return {cdx, (unsigned int)qrand() % cats[cdx].entries.length()};
+	unsigned int lv = (unsigned int)qrand() % (unsigned int)cats[cdx].entries.length();
+	indexLock.unlock();
+	return {cdx, lv};
 }
 
 void PreloadingWeightedCategoryImageProvider::resetRandom() {
 	workLock.lock();
 	preloads.clear();
-	for (unsigned int i = 0; i < numPreload; i++) preloads.append(generateRandomPreload());
-	PreloadSet & p = preloads.first();
-	cindex = p.cindex;
-	lindex = p.lindex;
+	preloads.append({cindex, lindex});
+	for (unsigned int i = 0; i < numPreload - 1; i++) preloads.append(generateRandomPreload());
 	workLock.unlock();
 }
 
@@ -259,7 +289,6 @@ PreloadingWeightedCategoryImageProvider::PreloadSet PreloadingWeightedCategoryIm
 	preloads.append(generateRandomPreload());
 	workLock.unlock();
 	return p;
-
 }
 
 
@@ -335,22 +364,20 @@ void PreloadingWeightedCategoryImageProvider::workTick() {
 			}
 		}
 	}
-	indexLock.unlock();
-	workLock.unlock();
-}
-
-void PreloadingWeightedCategoryImageProvider::clearTick() {
-	workLock.lock();
-	indexLock.lock();
-	for (unsigned int c = 0; c < (unsigned int)cats.length(); c++) {
-		CatEntry const & cent = cats.at(c);
-		unsigned int llen = (unsigned int)cent.entries.length();
-		for (unsigned int l = 0; l < llen; l++) {
-			bool unload = true;
-			for (PreloadSet p : preloads) if (p.cindex == c && p.lindex == l) unload = false;
-			if (unload && !cent.entries[l]->img.isNull()) {
-				cent.entries[l]->img = nullImg;
+	QMutableListIterator<std::shared_ptr<ImgEntry>> mu2 {loaded};
+	while (mu2.hasNext()) {
+		std::shared_ptr<ImgEntry> & A = mu2.next();
+		bool unload = true;
+		for (PreloadSet & p : preloads) {
+			std::shared_ptr<ImgEntry> & B = cats[p.cindex].entries[p.lindex];
+			if (A->path == B->path) {
+				unload = false;
+				break;
 			}
+		}
+		if (unload) {
+			A->img = nullImg;
+			mu2.remove();
 		}
 	}
 	indexLock.unlock();

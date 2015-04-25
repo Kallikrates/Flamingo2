@@ -53,12 +53,14 @@ protected:
 	unsigned int maxThreads = std::thread::hardware_concurrency();
 	unsigned int numPreload = 5;
 	inline std::shared_ptr<ImgEntry> getCurrentEntry();
+	void validateRandom();
+	bool indexIsValid(unsigned int, unsigned int);
+
 private:
 	unsigned int cindex {0};
 	unsigned int lindex {0};
 	Navdir navdir {Navdir::Neutral};
 	QTimer * workClock = nullptr;
-	QTimer * clearClock = nullptr;
 	std::recursive_mutex workLock;
 	std::recursive_mutex indexLock;
 	struct PreloadSet {unsigned int cindex; unsigned int lindex;};
@@ -72,9 +74,9 @@ private:
 	void resetRandom();
 	PreloadSet advanceRandom();
 	inline void providerArgDirRecursor(QDir from, QList<QString> & paths);
+	QList<std::shared_ptr<ImgEntry>> loaded;
 private slots:
 	void workTick();
-	void clearTick();
 };
 
 #endif //IMGPROVIDER_HPP
