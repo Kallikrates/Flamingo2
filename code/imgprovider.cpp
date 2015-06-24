@@ -1,7 +1,6 @@
 #include "imgprovider.hpp"
 
 #include <QImageReader>
-#include <QDebug>
 
 static const QImage nullImg {0, 0, QImage::Format_Mono};
 
@@ -13,7 +12,29 @@ inline void PreloadingWeightedCategoryImageProvider::providerArgDirRecursor(QDir
 	}
 }
 
-PreloadingWeightedCategoryImageProvider::PreloadingWeightedCategoryImageProvider(ProviderArgs const & args) : AsyncImageProvider(0) {
+PreloadingWeightedCategoryImageProvider::PreloadingWeightedCategoryImageProvider() : AsyncImageProvider(0) {
+	workClock = new QTimer(this);
+	QObject::connect(workClock, SIGNAL(timeout()), this, SLOT(workTick()));
+	workClock->setSingleShot(false);
+	workClock->start(25);
+}
+
+PreloadingWeightedCategoryImageProvider::~PreloadingWeightedCategoryImageProvider() {
+	workLock.lock();
+	workClock->stop();
+	workLock.unlock();
+	for (IETL * ietl : loaders) {
+		if (ietl->thread->joinable()) ietl->thread->join();
+		delete ietl->thread;
+		delete ietl;
+	}
+	delete workClock;
+}
+
+void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs const & args) {
+	workLock.lock();
+	indexLock.lock();
+	pargs_m.write_lock();
 	for (ProviderArg const & arg : args.getArgs()) {
 		if (arg.path.isDir()) {
 			switch (arg.recurse) {
@@ -64,30 +85,16 @@ PreloadingWeightedCategoryImageProvider::PreloadingWeightedCategoryImageProvider
 		}
 	}
 	if (!args.getReqStart().isNull()) this->Seek(args.getReqStart());
-
-	workClock = new QTimer(this);
-	QObject::connect(workClock, SIGNAL(timeout()), this, SLOT(workTick()));
-	workClock->setSingleShot(false);
-	workClock->start(25);
-}
-
-PreloadingWeightedCategoryImageProvider::~PreloadingWeightedCategoryImageProvider() {
-	workLock.lock();
-	workClock->stop();
+	indexLock.unlock();
 	workLock.unlock();
-	for (IETL * ietl : loaders) {
-		if (ietl->thread->joinable()) ietl->thread->join();
-		delete ietl->thread;
-		delete ietl;
-	}
-	delete workClock;
+	pargs_m.write_unlock();
 }
 
 static const QString nullStr {};
 
 QString const & PreloadingWeightedCategoryImageProvider::CurrentName() {
-	if (cats.length() == 0) return nullStr;
 	indexLock.lock();
+	if (cats.length() == 0) return nullStr;
 	QString const & str = getCurrentEntry()->path;
 	indexLock.unlock();
 	return str;

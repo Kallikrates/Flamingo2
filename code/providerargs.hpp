@@ -1,6 +1,8 @@
 #ifndef PROVIDERARGS_HPP
 #define PROVIDERARGS_HPP
 
+#include "common.hpp"
+
 #include <QList>
 #include <QString>
 #include <QDir>

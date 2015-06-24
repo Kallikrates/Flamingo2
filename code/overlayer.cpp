@@ -1,6 +1,5 @@
 #include "overlayer.hpp"
 
-#include <QtWidgets>
 #include <QtGui>
 
 inline static void byteConstrain(int & in) {

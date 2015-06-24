@@ -1,11 +1,7 @@
 #ifndef MAINWINDOW_HPP
 #define MAINWINDOW_HPP
 
-#include <atomic>
-#include <thread>
-#include <QWidget>
-#include <QtWidgets>
-
+#include "common.hpp"
 #include "imgprovider.hpp"
 #include "options.hpp"
 
@@ -19,12 +15,12 @@ public:
 	virtual ~MainWindow();
 protected:
 	virtual void keyPressEvent(QKeyEvent *);
+	virtual void closeEvent(QCloseEvent *);
 protected slots:
 	void handleImage(QImage);
 	void handleBilProc();
 	void handleBilComp();
 private:
-	Options options;
 	QGridLayout * layout = nullptr;
 	ImageView * view = nullptr;
 	AsyncImageProvider * provider = nullptr;
@@ -34,6 +30,11 @@ private:
 	void slideshowRun();
 	std::atomic_bool slideshowActive {false};
 	std::thread * slideshowThread = nullptr;
+
+	QSettings settings {"Sensory Systems", "Flamingo2"};
+	Options options;
+private slots:
+	void handleOptionsApplied();
 };
 
 #endif //MAINWINDOW_HPP

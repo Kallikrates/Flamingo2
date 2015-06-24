@@ -3,6 +3,10 @@
 #include "overlayer.hpp"
 
 MainWindow::MainWindow(QStringList arguments) : QWidget(0) {
+	settings.beginGroup("Options");
+	options.readSettings(settings);
+	settings.endGroup();
+
 	layout = new QGridLayout(this);
 	layout->setMargin(0);
 	view = new ImageView(this);
@@ -12,11 +16,21 @@ MainWindow::MainWindow(QStringList arguments) : QWidget(0) {
 	layout->addWidget(over, 0, 0, 1, 1);
 	QObject::connect(view, SIGNAL(bilProc()), this, SLOT(handleBilProc()));
 	QObject::connect(view, SIGNAL(bilComplete()), this, SLOT(handleBilComp()));
-	opwin = new OptionsWindow(0);
-	this->options = this->opwin->getOptions();
-	provider = new PreloadingWeightedCategoryImageProvider(arguments);
+	opwin = new OptionsWindow(options, 0);
+	QObject::connect(opwin, SIGNAL(applied()), this, SLOT(handleOptionsApplied()));
+	provider = new PreloadingWeightedCategoryImageProvider();
 	QObject::connect(provider, SIGNAL(Loaded(QImage)), this, SLOT(handleImage(QImage)));
 	provider->Current();
+
+	settings.beginGroup("MainWindow");
+	this->setGeometry(settings.value("wingeo", this->geometry()).toRect());
+	settings.endGroup();
+
+	opwin->show();
+	opwin->hide();
+	opwin->setFixedSize(opwin->minimumSize());
+
+	provider->SetProviderArguments({arguments});
 }
 
 MainWindow::~MainWindow() {
@@ -59,7 +73,13 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		provider->Remove();
 		break;
 	case Qt::Key_O:
+		{
+		QSize oms = opwin->minimumSize();
+		int mx = this->x() + (this->width() / 2) - oms.width() / 2;
+		int my = this->y() + (this->height() / 2) - oms.height() / 2;
+		opwin->setGeometry({QPoint{mx, my}, oms});
 		opwin->show();
+		}
 		break;
 	case Qt::Key_S:
 		if (slideshowActive) {
@@ -97,6 +117,20 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 	this->setWindowTitle("f2: "+provider->CurrentName());
 }
 
+void MainWindow::closeEvent(QCloseEvent *) {
+	if (this->windowState() & Qt::WindowFullScreen) {
+		this->setWindowState(this->windowState() & ~Qt::WindowFullScreen);
+	}
+
+	settings.beginGroup("Options");
+	options.writeSetttings(settings);
+	settings.endGroup();
+
+	settings.beginGroup("MainWindow");
+	settings.setValue("wingeo", this->geometry());
+	settings.endGroup();
+}
+
 void MainWindow::handleImage(QImage img) {
 	this->setWindowTitle("f2: "+provider->CurrentName());
 	over->setFlicker(Overlayer::Flicker::Load, false);
@@ -132,4 +166,8 @@ void MainWindow::slideshowRun() {
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
+}
+
+void MainWindow::handleOptionsApplied() {
+	this->options = opwin->getOptions();
 }

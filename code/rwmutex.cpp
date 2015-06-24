@@ -25,3 +25,7 @@ void rwmutex::write_lock() {
 void rwmutex::write_unlock() {
 	writing.store(false);
 }
+
+bool rwmutex::is_write_locked() {
+	return writing;
+}

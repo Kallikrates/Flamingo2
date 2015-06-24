@@ -1,13 +1,11 @@
 #ifndef IMGVIEW_HPP
 #define IMGVIEW_HPP
 
-#include <QWidget>
+#include "common.hpp"
+
 #include <QPixmap>
 #include <QImage>
 #include <QTimer>
-#include <atomic>
-#include <thread>
-#include <mutex>
 
 #include "rwmutex.hpp"
 

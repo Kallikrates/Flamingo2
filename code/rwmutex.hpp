@@ -14,6 +14,7 @@ public:
 	void read_unlock();
 	void write_lock();
 	void write_unlock();
+	bool is_write_locked();
 private:
 	static std::chrono::microseconds waitTime;
 	std::atomic_bool writing {false};

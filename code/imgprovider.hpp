@@ -1,18 +1,15 @@
 #ifndef IMGPROVIDER_HPP
 #define IMGPROVIDER_HPP
 
-#include <atomic>
-#include <memory>
-#include <mutex>
-#include <thread>
-#include <vector>
-#include <QObject>
+#include "common.hpp"
+
 #include <QImage>
 #include <QList>
 #include <QTimer>
 #include <QFile>
 #include <QDir>
 
+#include "rwmutex.hpp"
 #include "providerargs.hpp"
 
 class AsyncImageProvider : public QObject {
@@ -22,6 +19,7 @@ signals:
 public:
 	virtual ~AsyncImageProvider() {}
 	virtual QString const & CurrentName() = 0;
+	virtual void SetProviderArguments(ProviderArgs const & args) = 0;
 public slots:
 	virtual void Current() = 0;
 	virtual void Next() = 0;
@@ -35,9 +33,10 @@ protected:
 class PreloadingWeightedCategoryImageProvider : public AsyncImageProvider {
 	Q_OBJECT
 public:
-	PreloadingWeightedCategoryImageProvider(ProviderArgs const & args);
+	PreloadingWeightedCategoryImageProvider();
 	virtual ~PreloadingWeightedCategoryImageProvider();
 	virtual QString const & CurrentName();
+	virtual void SetProviderArguments(ProviderArgs const & args);
 public slots:
 	virtual void Current();
 	virtual void Next();
@@ -55,7 +54,6 @@ protected:
 	inline std::shared_ptr<ImgEntry> getCurrentEntry();
 	void validateRandom();
 	bool indexIsValid(unsigned int, unsigned int);
-
 private:
 	unsigned int cindex {0};
 	unsigned int lindex {0};
@@ -75,6 +73,8 @@ private:
 	PreloadSet advanceRandom();
 	inline void providerArgDirRecursor(QDir from, QList<QString> & paths);
 	QList<std::shared_ptr<ImgEntry>> loaded;
+	rwmutex pargs_m;
+
 private slots:
 	void workTick();
 };

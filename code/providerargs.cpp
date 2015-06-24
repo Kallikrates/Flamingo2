@@ -1,7 +1,5 @@
 #include "providerargs.hpp"
 
-#include <QDebug>
-
 ProviderArgs::ProviderArgs(QList<QString> inargs) {
 	inargs.removeFirst();
 	Recurse recur = Recurse::NoRecur;

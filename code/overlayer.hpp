@@ -1,7 +1,8 @@
 #ifndef OVERLAYER_HPP
 #define OVERLAYER_HPP
 
-#include <QWidget>
+#include "common.hpp"
+
 #include <QTimer>
 
 class Overlayer : public QWidget {
