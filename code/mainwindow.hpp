@@ -15,6 +15,7 @@ public:
 	virtual ~MainWindow();
 protected:
 	virtual void keyPressEvent(QKeyEvent *);
+	virtual void mousePressEvent(QMouseEvent *);
 	virtual void closeEvent(QCloseEvent *);
 protected slots:
 	void handleImage(QImage);

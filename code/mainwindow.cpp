@@ -46,6 +46,25 @@ MainWindow::~MainWindow() {
 	delete layout;
 }
 
+void MainWindow::mousePressEvent(QMouseEvent * QME) {
+	switch(QME->button()) {
+	case Qt::RightButton:
+		QME->accept();
+		this->close();
+		break;
+	case Qt::ForwardButton:
+		QME->accept();
+		provider->Next();
+		break;
+	case Qt::BackButton:
+		QME->accept();
+		provider->Previous();
+		break;
+	default:
+		return;
+	}
+}
+
 void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 	QKE->accept();
 	switch (QKE->key()) {
