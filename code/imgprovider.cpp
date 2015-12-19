@@ -4,11 +4,12 @@
 
 static const QImage nullImg {0, 0, QImage::Format_Mono};
 
-inline void PreloadingWeightedCategoryImageProvider::providerArgDirRecursor(QDir from, QList<QString> & paths) {
+inline void PreloadingWeightedCategoryImageProvider::providerArgDirRecursor(QDir from, QList<QString> & paths, int max_depth, int cur_depth) {
+	if (max_depth >= 0 && cur_depth >= max_depth) return;
 	QFileInfoList qfil = from.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
 	for (QFileInfo fi : qfil) {
 		if (fi.isFile()) paths.append(fi.canonicalFilePath());
-		else providerArgDirRecursor(QDir(fi.canonicalFilePath()), paths);
+		else providerArgDirRecursor(QDir(fi.canonicalFilePath()), paths, max_depth, cur_depth + 1);
 	}
 }
 
@@ -51,7 +52,7 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 			case Recurse::SingleCat:
 			{
 				QList<QString> paths;
-				providerArgDirRecursor(QDir(arg.path.canonicalFilePath()), paths);
+				providerArgDirRecursor(QDir(arg.path.canonicalFilePath()), paths, arg.depth, -1);
 				if (paths.length() > 0) {
 					QList<std::shared_ptr<ImgEntry>> imgs;
 					for (QString str : paths) {
@@ -66,7 +67,7 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 				QFileInfoList dirs = QDir(arg.path.canonicalFilePath()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
 				for (QFileInfo dir : dirs) {
 					QList<QString> paths;
-					providerArgDirRecursor(QDir(dir.canonicalFilePath()), paths);
+					providerArgDirRecursor(QDir(dir.canonicalFilePath()), paths, arg.depth, 0);
 					if (paths.length() > 0) {
 						QList<std::shared_ptr<ImgEntry>> imgs;
 						for (QString str : paths) {
@@ -155,7 +156,16 @@ void PreloadingWeightedCategoryImageProvider::Remove() {
 		validateRandom();
 		break;
 	}
-	Current();
+	switch (navdir) {
+	case Navdir::Neutral:
+	case Navdir::Forward:
+	case Navdir::Backward:
+		Current();
+		break;
+	case Navdir::Random:
+		Random();
+		break;
+	}
 	indexLock.unlock();
 }
 

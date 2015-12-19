@@ -71,7 +71,6 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 	case Qt::Key_Right:
 	case Qt::Key_Left:
 	case Qt::Key_Up:
-	case Qt::Key_Delete:
 		over->setFlicker(Overlayer::Flicker::Load, true);
 		break;
 	}
@@ -88,9 +87,14 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 	case Qt::Key_Up:
 		provider->Random();
 		break;
-	case Qt::Key_Delete:
-		provider->Remove();
-		break;
+	case Qt::Key_Delete: {
+		QString cur = provider->CurrentName();
+		if (QMessageBox::warning(this, "Delete?", QString("%1\n\nThis image will be HARD deleted, it will not go to any sort of trash bin. Proceed?").arg(cur), QMessageBox::Yes|QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes) {
+			QFile(cur).remove();
+			over->setFlicker(Overlayer::Flicker::Load, true);
+			provider->Remove();
+		}
+		break; }
 	case Qt::Key_O:
 		{
 		QSize oms = opwin->minimumSize();
@@ -130,6 +134,18 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 			over->setIndicatorsEnabled(true);
 			over->setNotification("Load Indicators Shown");
 		}
+	case Qt::Key_1:
+		view->setKeepState(ImageView::KEEP_FIT);
+		break;
+	case Qt::Key_2:
+		view->setKeepState(ImageView::KEEP_FIT_FORCE);
+		break;
+	case Qt::Key_3:
+		view->setKeepState(ImageView::KEEP_EXPANDED);
+		break;
+	case Qt::Key_4:
+		view->setKeepState(ImageView::KEEP_EQUAL);
+		break;
 	default:
 		return;
 	}
@@ -183,7 +199,7 @@ void MainWindow::slideshowRun() {
 				break;
 			}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		std::this_thread::sleep_for(std::chrono::microseconds(500));
 	}
 }
 

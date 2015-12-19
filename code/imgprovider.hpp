@@ -71,7 +71,7 @@ private:
 	inline PreloadSet generateRandomPreload();
 	void resetRandom();
 	PreloadSet advanceRandom();
-	inline void providerArgDirRecursor(QDir from, QList<QString> & paths);
+	inline void providerArgDirRecursor(QDir from, QList<QString> & paths, int max_depth, int cur_depth);
 	QList<std::shared_ptr<ImgEntry>> loaded;
 	rwmutex pargs_m;
 

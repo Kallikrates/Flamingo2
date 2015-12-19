@@ -58,7 +58,7 @@ void ImageView::wheelEvent(QWheelEvent *QWE) {
 	if (QWE->orientation() == Qt::Vertical) {
 		QWE->accept();
 		this->setZoom((1.0f - QWE->delta() / 360.0f / 3.0f) * zoom, QPointF(QWE->pos().x() / (float)this->width() , QWE->pos().y() / (float)this->height()));
-		this->repaint();
+		this->update();
 	}
 	QWidget::wheelEvent(QWE);
 }
@@ -235,7 +235,12 @@ void ImageView::bilRun() {
 			QRect rPart = partRect;
 			QRect rDraw = drawRect;
 			drawLock.read_unlock();
-			QImage raster = view.copy(rPart);
+			QImage raster;
+			if(rPart == view.rect()) {
+				raster = view;
+			} else {
+				raster = view.copy(rPart);
+			}
 			QSize rSize = rDraw.size();
 			viewLock.read_unlock();
 			raster = raster.scaled(rSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);

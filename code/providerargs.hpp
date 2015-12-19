@@ -14,6 +14,7 @@ struct ProviderArg {
 	QFileInfo path;
 	Recurse recurse;
 	float weight;
+	int depth;
 };
 
 class ProviderArgs {

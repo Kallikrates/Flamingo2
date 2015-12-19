@@ -2,6 +2,8 @@
 #include "mainwindow.hpp"
 
 Core::Core(int &argc, char **&argv) : QApplication(argc, argv) {
+	QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+
 	window = new MainWindow(this->arguments());
 	window->show();
 }
