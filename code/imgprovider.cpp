@@ -4,12 +4,13 @@
 
 static const QImage nullImg {0, 0, QImage::Format_Mono};
 
-inline void PreloadingWeightedCategoryImageProvider::providerArgDirRecursor(QDir from, QList<QString> & paths, int max_depth, int cur_depth) {
+inline void PreloadingWeightedCategoryImageProvider::providerArgDirRecursor(QDir from, QList<QString> & paths, int max_depth, int cur_depth, QCollator & col) {
 	if (max_depth >= 0 && cur_depth >= max_depth) return;
 	QFileInfoList qfil = from.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+	qSort(qfil.begin(), qfil.end(), [&](QFileInfo const & a, QFileInfo const & b){return col.compare(a.canonicalFilePath(), b.canonicalFilePath()) < 0;});
 	for (QFileInfo fi : qfil) {
 		if (fi.isFile()) paths.append(fi.canonicalFilePath());
-		else providerArgDirRecursor(QDir(fi.canonicalFilePath()), paths, max_depth, cur_depth + 1);
+		else providerArgDirRecursor(QDir(fi.canonicalFilePath()), paths, max_depth, cur_depth + 1, col);
 	}
 }
 
@@ -36,12 +37,18 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 	workLock.lock();
 	indexLock.lock();
 	pargs_m.write_lock();
+	
+	QCollator col;
+    col.setNumericMode(true);
+    col.setCaseSensitivity(Qt::CaseInsensitive);
+	
 	for (ProviderArg const & arg : args.getArgs()) {
 		if (arg.path.isDir()) {
 			switch (arg.recurse) {
 			case Recurse::NoRecur:
 			{
 				QFileInfoList qfil = QDir(arg.path.canonicalFilePath()).entryInfoList(QDir::Files);
+				qSort(qfil.begin(), qfil.end(), [&](QFileInfo const & a, QFileInfo const & b){return col.compare(a.canonicalFilePath(), b.canonicalFilePath()) < 0;});
 				QList<std::shared_ptr<ImgEntry>> imgs;
 				for (QFileInfo & fi : qfil) {
 					imgs.append(std::shared_ptr<ImgEntry> (new ImgEntry {fi.canonicalFilePath(), nullImg}));
@@ -52,7 +59,7 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 			case Recurse::SingleCat:
 			{
 				QList<QString> paths;
-				providerArgDirRecursor(QDir(arg.path.canonicalFilePath()), paths, arg.depth, -1);
+				providerArgDirRecursor(QDir(arg.path.canonicalFilePath()), paths, arg.depth, -1, col);
 				if (paths.length() > 0) {
 					QList<std::shared_ptr<ImgEntry>> imgs;
 					for (QString str : paths) {
@@ -65,9 +72,10 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 			case Recurse::MultiCat:
 			{
 				QFileInfoList dirs = QDir(arg.path.canonicalFilePath()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+				qSort(dirs.begin(), dirs.end(), [&](QFileInfo const & a, QFileInfo const & b){return col.compare(a.canonicalFilePath(), b.canonicalFilePath()) < 0;});
 				for (QFileInfo dir : dirs) {
 					QList<QString> paths;
-					providerArgDirRecursor(QDir(dir.canonicalFilePath()), paths, arg.depth, 0);
+					providerArgDirRecursor(QDir(dir.canonicalFilePath()), paths, arg.depth, 0, col);
 					if (paths.length() > 0) {
 						QList<std::shared_ptr<ImgEntry>> imgs;
 						for (QString str : paths) {
