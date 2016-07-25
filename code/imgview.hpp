@@ -23,6 +23,7 @@ public:
 	void mouseReleaseEvent(QMouseEvent *);
 	void mouseMoveEvent(QMouseEvent *);
 	QImage getImage() {return view;}
+	QImage getImageOfView();
 	ZKEEP getKeepState() {return keep;}
 public slots:
 	void setImage(QImage, ZKEEP keepStart = KEEP_FIT);

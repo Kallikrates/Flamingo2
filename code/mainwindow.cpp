@@ -126,6 +126,25 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 			over->setNotification("Fullscreen Enabled");
 		}
 		break;
+	case Qt::Key_M:
+		if (this->windowState() & Qt::WindowMaximized) {
+			this->setWindowState(this->windowState() & ~Qt::WindowMaximized);
+			over->setNotification("Unmaximized");
+		} else {
+			this->setWindowState(this->windowState() | Qt::WindowMaximized);
+			over->setNotification("Maximized");
+		}
+		break;
+	case Qt::Key_D:
+		if (this->windowFlags() & Qt::WindowStaysOnBottomHint) {
+			this->setWindowFlags(this->windowFlags() & ~Qt::WindowStaysOnBottomHint);
+			over->setNotification("Desktop Mode Disabled");
+		} else {
+			this->setWindowFlags(this->windowFlags() | Qt::WindowStaysOnBottomHint);
+			over->setNotification("Desktop Mode Enabled");
+		}
+		this->show();
+		break;
 	case Qt::Key_I:
 		if (over->getIndicatorsEnabled()) {
 			over->setIndicatorsEnabled(false);
@@ -134,6 +153,14 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 			over->setIndicatorsEnabled(true);
 			over->setNotification("Load Indicators Shown");
 		}
+	case Qt::Key_V: {
+		QImage img = view->getImageOfView();
+		QString loc = QFileDialog::getSaveFileName(this, "Save Image View", QString("f2view_") + QFileInfo(provider->CurrentName()).fileName(), tr("JPEG Image (*.jpg);;Portable Network Graphics (*.png)"));
+		if (!loc.isEmpty()) {
+			img.save(loc, nullptr, 100);
+		}
+		break;
+	}
 	case Qt::Key_1:
 		view->setKeepState(ImageView::KEEP_FIT);
 		break;

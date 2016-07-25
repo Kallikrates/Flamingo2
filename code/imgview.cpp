@@ -7,7 +7,7 @@ ImageView::ImageView(QWidget *parent, QImage image) : QWidget(parent), view(imag
 	QObject::connect(mouseHider, SIGNAL(timeout()), this, SLOT(hideMouse()));
 	this->setMouseTracking(true);
 	this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-
+	QObject::connect(this, SIGNAL(bilComplete), this, SLOT(update()));
 	bilWorker = new std::thread(&ImageView::bilRun, this);
 }
 
@@ -73,7 +73,7 @@ void ImageView::mousePressEvent(QMouseEvent *QME) {
 	}
 	if (QME->button() == Qt::MiddleButton) {
 		this->setZoom(1.0f, QPointF(QME->pos().x() / (float)this->width() , QME->pos().y() / (float)this->height()));
-		this->repaint();
+		this->update();
 	}
 	QWidget::mousePressEvent(QME);
 }
@@ -108,8 +108,17 @@ void ImageView::setImage(QImage newView, ZKEEP keepStart) {
 	if (this->view != newView) {
 		this->view = newView;
 		viewLock.write_unlock();
-		this->repaint();
+		this->update();
 	} else viewLock.write_unlock();
+}
+
+QImage ImageView::getImageOfView() {
+	viewLock.read_lock();
+	drawLock.read_lock();
+	QImage part = view.copy(partRect);
+	drawLock.read_unlock();
+	viewLock.read_unlock();
+	return part;
 }
 
 void ImageView::setZoom(qreal nZoom, QPointF focus) {
@@ -250,7 +259,6 @@ void ImageView::bilRun() {
 			bilDraw = rDraw;
 			bilCompare = rCompare;
 			drawLock.write_unlock();
-			this->update();
 			emit bilComplete();
 		} else {
 			std::this_thread::sleep_for(std::chrono::milliseconds(25));
