@@ -7,6 +7,7 @@
 
 class ImageView;
 class Overlayer;
+class PixelScripter;
 
 class MainWindow : public QWidget {
 	Q_OBJECT
@@ -26,6 +27,7 @@ private:
 	ImageView * view = nullptr;
 	AsyncImageProvider * provider = nullptr;
 	Overlayer * over = nullptr;
+	PixelScripter * pixscr = nullptr;
 	OptionsWindow * opwin = nullptr;
 
 	void slideshowRun();
@@ -36,6 +38,7 @@ private:
 	Options options;
 private slots:
 	void handleOptionsApplied();
+	void handlePixScrProcComplete(QImage, QString);
 };
 
 #endif //MAINWINDOW_HPP

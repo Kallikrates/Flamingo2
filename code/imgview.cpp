@@ -7,7 +7,7 @@ ImageView::ImageView(QWidget *parent, QImage image) : QWidget(parent), view(imag
 	QObject::connect(mouseHider, SIGNAL(timeout()), this, SLOT(hideMouse()));
 	this->setMouseTracking(true);
 	this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-	QObject::connect(this, SIGNAL(bilComplete), this, SLOT(update()));
+	QObject::connect(this, SIGNAL(bilComplete()), this, SLOT(update()));
 	bilWorker = new std::thread(&ImageView::bilRun, this);
 }
 

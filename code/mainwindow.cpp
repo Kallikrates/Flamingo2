@@ -1,6 +1,8 @@
 #include "mainwindow.hpp"
 #include "imgview.hpp"
 #include "overlayer.hpp"
+#include "wallp.hpp"
+#include "pixelscripter.hpp"
 
 MainWindow::MainWindow(QStringList arguments) : QWidget(0) {
 	settings.beginGroup("Options");
@@ -12,6 +14,9 @@ MainWindow::MainWindow(QStringList arguments) : QWidget(0) {
 	view = new ImageView(this);
 	over = new Overlayer(this);
 	over->setFlicker(Overlayer::Flicker::Load, true);
+	pixscr = new PixelScripter(nullptr);
+	QObject::connect(pixscr, SIGNAL(compilation_success()), this, SLOT(handlePixScrCompilation()));
+	QObject::connect(pixscr, SIGNAL(process_complete(QImage, QString)), this, SLOT(handlePixScrProcComplete(QImage, QString)));
 	layout->addWidget(view, 0, 0, 1, 1);
 	layout->addWidget(over, 0, 0, 1, 1);
 	QObject::connect(view, SIGNAL(bilProc()), this, SLOT(handleBilProc()));
@@ -24,6 +29,10 @@ MainWindow::MainWindow(QStringList arguments) : QWidget(0) {
 
 	settings.beginGroup("MainWindow");
 	this->setGeometry(settings.value("wingeo", this->geometry()).toRect());
+	settings.endGroup();
+	
+	settings.beginGroup("PixelScript");
+	pixscr->setEditorText(settings.value("saved_script", "").toString(), true);
 	settings.endGroup();
 
 	opwin->show();
@@ -39,6 +48,7 @@ MainWindow::~MainWindow() {
 		if (slideshowThread->joinable()) slideshowThread->join();
 		delete slideshowThread;
 	}
+	delete pixscr;
 	delete opwin;
 	delete over;
 	delete provider;
@@ -104,6 +114,15 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		opwin->show();
 		}
 		break;
+	case Qt::Key_P:
+		{
+		QSize oms = pixscr->minimumSize();
+		int mx = this->x() + (this->width() / 2) - oms.width() / 2;
+		int my = this->y() + (this->height() / 2) - oms.height() / 2;
+		pixscr->setGeometry({QPoint{mx, my}, oms});
+		pixscr->show();
+		}
+		break;
 	case Qt::Key_S:
 		if (slideshowActive) {
 			slideshowActive.store(false);
@@ -153,12 +172,18 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 			over->setIndicatorsEnabled(true);
 			over->setNotification("Load Indicators Shown");
 		}
+		break;
 	case Qt::Key_V: {
 		QImage img = view->getImageOfView();
 		QString loc = QFileDialog::getSaveFileName(this, "Save Image View", QString("f2view_") + QFileInfo(provider->CurrentName()).fileName(), tr("JPEG Image (*.jpg);;Portable Network Graphics (*.png)"));
 		if (!loc.isEmpty()) {
-			img.save(loc, nullptr, 100);
+			img.save(loc, nullptr, 95);
 		}
+		break;
+	}
+	case Qt::Key_W: {
+		QImage img = view->getImageOfView();
+		set_wallpaper(img);
 		break;
 	}
 	case Qt::Key_1:
@@ -191,12 +216,21 @@ void MainWindow::closeEvent(QCloseEvent *) {
 	settings.beginGroup("MainWindow");
 	settings.setValue("wingeo", this->geometry());
 	settings.endGroup();
+	
+	settings.beginGroup("PixelScript");
+	settings.setValue("saved_script", pixscr->getEditorText());
+	settings.endGroup();
 }
 
 void MainWindow::handleImage(QImage img) {
 	this->setWindowTitle("f2: "+provider->CurrentName());
 	over->setFlicker(Overlayer::Flicker::Load, false);
-	view->setImage(img, options.viewKeep);
+	if (options.use_ps) {
+		pixscr->set_process(img, provider->CurrentName());
+		over->setFlicker(Overlayer::Flicker::PixelScript, true);
+	} else {
+		view->setImage(img, options.viewKeep);
+	}
 }
 
 void MainWindow::handleBilProc() {
@@ -232,4 +266,11 @@ void MainWindow::slideshowRun() {
 
 void MainWindow::handleOptionsApplied() {
 	this->options = opwin->getOptions();
+}
+
+void MainWindow::handlePixScrProcComplete(QImage img, QString str) {
+	if (provider->CurrentName() == str) {
+		over->setFlicker(Overlayer::Flicker::PixelScript, false);
+		view->setImage(img, options.viewKeep);
+	}
 }

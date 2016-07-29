@@ -8,7 +8,7 @@
 class Overlayer : public QWidget {
 	Q_OBJECT
 public:
-	enum class Flicker {Load, Bilinear};
+	enum class Flicker {Load, Bilinear, PixelScript};
 	Overlayer(QWidget * parent = 0);
 	virtual ~Overlayer();
 	void setFlicker(Flicker, bool);
@@ -24,6 +24,8 @@ private:
 	int loadFlickerS = 0;
 	int bilFlickerV = 0;
 	int bilFlickerS = 0;
+	int psFlickerV = 0;
+	int psFlickerS = 0;
 	QTimer * elementClock = nullptr;
 	QString notifText;
 	int notifValue = 0;

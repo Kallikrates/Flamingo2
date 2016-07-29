@@ -11,6 +11,7 @@ struct Options {
 	ImageView::ZKEEP viewKeep {ImageView::KEEP_FIT_FORCE};
 	void writeSetttings(QSettings &) const;
 	void readSettings(QSettings const &);
+	bool use_ps;
 };
 
 class OptionsWindow : public QWidget {
@@ -37,6 +38,11 @@ private:
 	QWidget * slideshowTabWidget = nullptr;
 	QSpinBox * slideshowIntervalSpinbox = nullptr;
 	QComboBox * slideshowZoomCBox = nullptr;
+	
+	//PixelScript
+	int psTabIndex = 0;
+	QWidget * psTabWidget = nullptr;
+	QCheckBox * psCheckbox = nullptr;
 private slots:
 	void internalApply();
 };

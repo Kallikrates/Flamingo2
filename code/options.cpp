@@ -3,11 +3,13 @@
 void Options::readSettings(const QSettings & settings) {
 	this->slideshowInterval = std::chrono::milliseconds(settings.value("slideshowInterval", 5000).toInt());
 	this->viewKeep = (ImageView::ZKEEP)settings.value("slideshowZoomKeep", 1).toInt();
+	this->use_ps = settings.value("usePixelScripts", false).toBool();
 }
 
 void Options::writeSetttings(QSettings & settings) const {
 	settings.setValue("slideshowInterval", (int)this->slideshowInterval.count());
 	settings.setValue("slideshowZoomKeep", (int)this->viewKeep);
+	settings.setValue("usePixelScripts", this->use_ps);
 }
 
 OptionsWindow::OptionsWindow(Options opt, QWidget *parent) : QWidget (parent), options(opt) {
@@ -55,6 +57,17 @@ OptionsWindow::OptionsWindow(Options opt, QWidget *parent) : QWidget (parent), o
 	slideshowZoomWidget->layout()->addWidget(slideshowZoomLabel);
 	slideshowZoomWidget->layout()->addWidget(slideshowZoomCBox);
 	slideshowLayout->addWidget(slideshowZoomWidget);
+	
+	//PixelScript
+	psTabWidget = new QWidget(this);
+	psTabIndex = tabs->addTab(psTabWidget, "PixelScript");
+	QGridLayout * psLayout = new QGridLayout(psTabWidget);
+	//psLayout->setMargin(1);
+	//psLayout->setSpacing(1);
+	
+	psCheckbox = new QCheckBox {"Use PixelScripts", psTabWidget};
+	psCheckbox->setChecked(opt.use_ps);
+	psLayout->addWidget(psCheckbox, 0, 0);
 }
 
 OptionsWindow::~OptionsWindow() {}
@@ -64,6 +77,7 @@ void OptionsWindow::showEvent(QShowEvent * QSE) {
 	slideshowIntervalSpinbox->setValue(options.slideshowInterval.count());
 	if (options.viewKeep) slideshowZoomCBox->setCurrentIndex((int)options.viewKeep - 1);
 	else slideshowZoomCBox->setCurrentIndex(0);
+	psCheckbox->setChecked(options.use_ps);
 }
 
 void OptionsWindow::keyPressEvent(QKeyEvent * QKE) {
@@ -77,5 +91,6 @@ Options const & OptionsWindow::getOptions() const {
 void OptionsWindow::internalApply() {
 	options.slideshowInterval = std::chrono::milliseconds(slideshowIntervalSpinbox->value());
 	options.viewKeep = (ImageView::ZKEEP)(slideshowZoomCBox->currentIndex() + 1);
+	options.use_ps = psCheckbox->isChecked();
 	emit applied();
 }

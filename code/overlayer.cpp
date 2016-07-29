@@ -35,6 +35,11 @@ void Overlayer::setFlicker(Flicker f, bool b) {
 		bilFlickerS = b ? 1 : 0;
 		bilFlickerV = 0;
 		break;
+	case Flicker::PixelScript:
+		if (b && psFlickerS) break;
+		psFlickerS = b ? 1 : 0;
+		psFlickerV = 0;
+		break;
 	}
 }
 
@@ -57,7 +62,7 @@ void Overlayer::paintEvent(QPaintEvent *QPE) {
 	paint.setPen(Qt::NoPen);
 	paint.setCompositionMode(QPainter::CompositionMode_Difference);
 	if (loadFlickerS) {
-		QBrush lb {QColor(255, 0, 127, indicatorsEnabled ? loadFlickerV : 0), Qt::SolidPattern};
+		QBrush lb {QColor(255, 127, 0, indicatorsEnabled ? loadFlickerV : 0), Qt::SolidPattern};
 		paint.setBrush(lb);
 		paint.drawRect(indOffs, indOffs, indSize, indSize);
 	}
@@ -65,6 +70,11 @@ void Overlayer::paintEvent(QPaintEvent *QPE) {
 		QBrush lb {QColor(0, 255, 127, indicatorsEnabled ? bilFlickerV : 0), Qt::SolidPattern};
 		paint.setBrush(lb);
 		paint.drawRect(indOffs + (indOffs + indSize), indOffs, indSize, indSize);
+	}
+	if (psFlickerS) {
+		QBrush lb {QColor(127, 0, 255, indicatorsEnabled ? psFlickerV : 0), Qt::SolidPattern};
+		paint.setBrush(lb);
+		paint.drawRect(indOffs + (indOffs + indSize) * 2, indOffs, indSize, indSize);
 	}
 	if (notifValue) {
 		int bv = notifValue * 16;
@@ -111,10 +121,26 @@ void Overlayer::manageElements() {
 		break;
 	}
 	byteConstrain(bilFlickerV);
+	
+	switch (psFlickerS) {
+	case 0:
+		break;
+	case -1:
+		if (psFlickerV <= 0) {
+			psFlickerS = 1;
+		} else psFlickerV-=flm;
+		break;
+	case 1:
+		if (psFlickerV >= 255) {
+			psFlickerS = -1;
+		} else psFlickerV+=flm;
+		break;
+	}
+	byteConstrain(psFlickerV);
 
 	if (notifValue >= 0) notifValue--;
 
-	if (loadFlickerS || bilFlickerS) doRepaint = true;
+	if (loadFlickerS || bilFlickerS || psFlickerS) doRepaint = true;
 	else if (notifValue >= 0) doRepaint = true;
-	if (doRepaint) this->repaint();
+	if (doRepaint) this->update();
 }
