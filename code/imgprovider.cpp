@@ -287,7 +287,9 @@ inline PreloadingWeightedCategoryImageProvider::PreloadSet PreloadingWeightedCat
 	unsigned int cdx = 0;
 	if (cats.length() > 1) {
 		float sum = 0.0f;
-		for (CatEntry & cat : cats) sum += cat.weight;
+		for (CatEntry & cat : cats) {
+			sum += cat.weight;
+		}
 		float value = (qrand() / (float)RAND_MAX) * sum;
 		cdx = cats.length();
 		while (value > 0 && --cdx > 0) {

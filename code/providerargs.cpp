@@ -33,10 +33,11 @@ ProviderArgs::ProviderArgs(QList<QString> inargs) {
 				case 'w': {
 					QString f = arg.mid(2);
 					weight = f.toFloat();
+					if (!weight) weight = 1;
 					break; }
 				case 'd': {
 					QString f = arg.mid(2);
-					depth = f.toInt();
+					depth = f.toUInt();
 					break; }
 				}
 			}

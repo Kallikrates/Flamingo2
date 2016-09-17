@@ -39,6 +39,7 @@ private:
 private slots:
 	void handleOptionsApplied();
 	void handlePixScrProcComplete(QImage, QString);
+	void handlePixScrCompilation();
 };
 
 #endif //MAINWINDOW_HPP

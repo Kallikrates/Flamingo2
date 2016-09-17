@@ -68,6 +68,8 @@ OptionsWindow::OptionsWindow(Options opt, QWidget *parent) : QWidget (parent), o
 	psCheckbox = new QCheckBox {"Use PixelScripts", psTabWidget};
 	psCheckbox->setChecked(opt.use_ps);
 	psLayout->addWidget(psCheckbox, 0, 0);
+	
+	this->setWindowFlags(Qt::WindowStaysOnTopHint);
 }
 
 OptionsWindow::~OptionsWindow() {}

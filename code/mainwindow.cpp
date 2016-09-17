@@ -265,7 +265,9 @@ void MainWindow::slideshowRun() {
 }
 
 void MainWindow::handleOptionsApplied() {
+	bool old_use_ps = options.use_ps;
 	this->options = opwin->getOptions();
+	if (options.use_ps != old_use_ps) provider->Current();
 }
 
 void MainWindow::handlePixScrProcComplete(QImage img, QString str) {
@@ -273,4 +275,8 @@ void MainWindow::handlePixScrProcComplete(QImage img, QString str) {
 		over->setFlicker(Overlayer::Flicker::PixelScript, false);
 		view->setImage(img, options.viewKeep);
 	}
+}
+
+void MainWindow::handlePixScrCompilation() {
+	if (options.use_ps) provider->Current();
 }

@@ -18,7 +18,7 @@ static char const * const template_src =
 
 CSyntaxHighlighter::CSyntaxHighlighter::CSyntaxHighlighter(QTextDocument* doc) : QSyntaxHighlighter(doc) {
 	CHighlightRule rule {};
-	QStringList types = {"int", "short", "float", "double", "void", "struct", "long", "unsigned"};
+	QStringList types = {"int", "short", "float", "double", "void", "struct", "long", "unsigned", "char", "uint", "uchar", "ushort"};
 	QStringList logic = {"if", "for", "while", "do"};
 	
 	rule.format.setFontWeight(QFont::Bold);
@@ -107,6 +107,8 @@ PixelScripter::PixelScripter(QWidget * parent) : QWidget(parent) {
 	this->setMinimumSize(400, 300);
 	
 	chk_thr = new std::thread(&PixelScripter::chk_thr_run, this);
+	
+	this->setWindowFlags(Qt::WindowStaysOnTopHint);
 }
 
 PixelScripter::~PixelScripter() {
@@ -123,6 +125,7 @@ void PixelScripter::set_process(QImage img_in, QString name) {
 	proc_mut.write_lock();
 	proc_image = img_in;
 	proc_name = name;
+	proc_new = true;
 	proc_mut.write_unlock();
 }
 
@@ -131,8 +134,9 @@ void PixelScripter::setEditorText(QString text, bool compile) {
 		tedit->setText(template_src);
 	} else {
 		tedit->setText(text);
-		this->compile_src();
 	}
+	tcc_mut.write_unlock();
+	if (compile) this->compile_src();
 }
 
 void PixelScripter::compile_src() {
@@ -172,11 +176,12 @@ void PixelScripter::compile_src() {
 
 void PixelScripter::chk_thr_run() {
 	while (chk_thr_go) {
-		proc_mut.read_lock();
-		if (chk_thr_name != proc_name) {
+		proc_mut.write_lock();
+		if (chk_thr_name != proc_name || proc_new) {
+			proc_new = false;
 			chk_thr_name = proc_name;
 			QImage fImg = proc_image;
-			proc_mut.read_unlock();
+			proc_mut.write_unlock();
 			QImage tImg = {fImg.size(), QImage::Format_ARGB32};
 			
 			tcc_mut.read_lock();
@@ -208,7 +213,7 @@ void PixelScripter::chk_thr_run() {
 			emit process_complete(tImg, chk_thr_name);
 			
 		} else {
-			proc_mut.read_unlock();
+			proc_mut.write_unlock();
 			std::this_thread::sleep_for(std::chrono::milliseconds(25));
 		}
 	}

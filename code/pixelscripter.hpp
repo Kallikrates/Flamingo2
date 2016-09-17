@@ -47,6 +47,7 @@ protected:
 	QTextEdit * comp_stat = nullptr;
 	QString proc_name;
 	QImage proc_image;
+	bool proc_new;
 	void keyPressEvent(QKeyEvent *) Q_DECL_OVERRIDE;
 protected slots:
 	void compile_src();
