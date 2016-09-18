@@ -88,7 +88,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *QME) {
 
 void ImageView::mouseMoveEvent(QMouseEvent *QME) {
 	this->showMouse();
-	if (mouseMoving) {
+	if (mouseMoving && !touchOverride) {
 		if (keep == KEEP_EXPANDED || keep == KEEP_EQUAL) keep = KEEP_NONE;
 		QPointF nPosAdj = ((QPointF)prevMPos - (QPointF)QME->pos()) * zoom;
 		QPointF prevView = viewOffset;
@@ -115,7 +115,9 @@ bool ImageView::event(QEvent * ev) {
 		QTouchEvent * tev = dynamic_cast<QTouchEvent *>(ev);
 		tev->accept();
 		
+		
 		QPointF centerNow, centerLast;
+		
 		for (auto & tp : tev->touchPoints()) {
 			centerNow += tp.pos();
 			centerLast += tp.lastPos();
@@ -123,12 +125,20 @@ bool ImageView::event(QEvent * ev) {
 		centerNow /= tev->touchPoints().length();
 		centerLast /= tev->touchPoints().length();
 		
+		qreal pinch = 0;
+		for (auto & tp : tev->touchPoints()) {
+			pinch += QPointF::dotProduct(tp.pos() - tp.lastPos(), centerNow - tp.pos());
+		}
+		
+		this->setZoom((1.0f - pinch / 360.0f / 3.0f) * zoom, QPointF(centerNow.x() / (float)this->width() , centerNow.y() / (float)this->height()));
+		
 		qDebug() << "Touch Center:" << centerNow << "Last:" << centerLast; 
 		QPointF centerDelta = (centerNow - centerLast) * zoom;
 		
 		this->viewOffset.rx() -= centerDelta.x();
 		this->viewOffset.ry() -= centerDelta.y();
 		this->calculateView();
+		this->update();
 		
 	}
 	
