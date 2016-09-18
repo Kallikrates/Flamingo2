@@ -127,10 +127,10 @@ bool ImageView::event(QEvent * ev) {
 		
 		qreal pinch = 0;
 		for (auto & tp : tev->touchPoints()) {
-			pinch += QPointF::dotProduct(tp.pos() - tp.lastPos(), centerNow - tp.pos());
+			pinch += QVector2D::dotProduct(QVector2D(tp.pos() - tp.lastPos()).normalized(), QVector2D(centerNow - tp.pos()).normalized());
 		}
 		
-		this->setZoom((1.0f - pinch / 360.0f / 3.0f) * zoom, QPointF(centerNow.x() / (float)this->width() , centerNow.y() / (float)this->height()));
+		this->setZoom((1.0f - pinch / 50000) * zoom, QPointF(centerNow.x() / (float)this->width() , centerNow.y() / (float)this->height()));
 		
 		qDebug() << "Touch Center:" << centerNow << "Last:" << centerLast; 
 		QPointF centerDelta = (centerNow - centerLast) * zoom;
