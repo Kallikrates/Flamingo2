@@ -2,6 +2,7 @@
 #include "imgview.hpp"
 
 ImageView::ImageView(QWidget *parent, QImage image) : QWidget(parent), view(image) {
+	this->setAttribute(Qt::WA_AcceptTouchEvents, true);
 	qRegisterMetaType<ZKEEP>("ZKEEP");
 	mouseHider->setSingleShot(true);
 	QObject::connect(mouseHider, SIGNAL(timeout()), this, SLOT(hideMouse()));
@@ -100,6 +101,21 @@ void ImageView::mouseMoveEvent(QMouseEvent *QME) {
 		this->prevMPos = QME->pos();
 	}
 	QWidget::mouseMoveEvent(QME);
+}
+
+bool ImageView::event(QEvent * ev) {
+	
+	if (ev->type() == QInputEvent::TouchBegin || ev->type() == QInputEvent::TouchEnd) {
+		ev->accept();
+	} else if (ev->type() == QInputEvent::TouchUpdate) {
+		QTouchEvent * tev = dynamic_cast<QTouchEvent *>(ev);
+		tev->accept();
+		for (auto & tp : tev->touchPoints()) {
+			qDebug() << tp.id() << ", " << tp.pos();
+		}
+	}
+	
+	return QWidget::event(ev);
 }
 
 void ImageView::setImage(QImage newView, ZKEEP keepStart) {

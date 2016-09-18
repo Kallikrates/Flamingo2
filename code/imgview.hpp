@@ -22,12 +22,13 @@ public:
 	void mousePressEvent(QMouseEvent *);
 	void mouseReleaseEvent(QMouseEvent *);
 	void mouseMoveEvent(QMouseEvent *);
+	bool event(QEvent *);
 	QImage getImage() {return view;}
 	QImage getImageOfView();
 	ZKEEP getKeepState() {return keep;}
 public slots:
 	void setImage(QImage, ZKEEP keepStart = KEEP_FIT);
-	void setKeepState(ZKEEP z) {keep = z; this->repaint();}
+	void setKeepState(ZKEEP z) {keep = z; this->update();}
 protected slots:
 	void centerView();
 private slots:
