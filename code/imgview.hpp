@@ -50,6 +50,7 @@ private: //Variables
 	bool paintCompletePartial = false;
 	QPointF focalPoint;
 	QTimer *mouseHider = new QTimer(this);
+	bool touchOverride = false;
 private: //Methods
 	void setZoom(qreal, QPointF focus = QPointF(0, 0));
 	void calculateZoomLevels();

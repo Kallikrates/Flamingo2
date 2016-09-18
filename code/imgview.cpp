@@ -105,8 +105,12 @@ void ImageView::mouseMoveEvent(QMouseEvent *QME) {
 
 bool ImageView::event(QEvent * ev) {
 	
-	if (ev->type() == QInputEvent::TouchBegin || ev->type() == QInputEvent::TouchEnd) {
+	if (ev->type() == QInputEvent::TouchBegin) {
 		ev->accept();
+		touchOverride = true;
+	} else if (ev->type() == QInputEvent::TouchEnd) {
+		ev->accept();
+		touchOverride = false;
 	} else if (ev->type() == QInputEvent::TouchUpdate) {
 		QTouchEvent * tev = dynamic_cast<QTouchEvent *>(ev);
 		tev->accept();
@@ -120,10 +124,10 @@ bool ImageView::event(QEvent * ev) {
 		centerLast /= tev->touchPoints().length();
 		
 		qDebug() << "Touch Center:" << centerNow << "Last:" << centerLast; 
-		QPointF centerDelta = centerNow - centerLast;
+		QPointF centerDelta = (centerNow - centerLast) * zoom;
 		
-		this->viewOffset.rx() += centerDelta.x();
-		this->viewOffset.ry() += centerDelta.y();
+		this->viewOffset.rx() -= centerDelta.x();
+		this->viewOffset.ry() -= centerDelta.y();
 		this->calculateView();
 		
 	}
