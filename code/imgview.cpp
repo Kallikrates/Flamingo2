@@ -110,9 +110,22 @@ bool ImageView::event(QEvent * ev) {
 	} else if (ev->type() == QInputEvent::TouchUpdate) {
 		QTouchEvent * tev = dynamic_cast<QTouchEvent *>(ev);
 		tev->accept();
+		
+		QPointF centerNow, centerLast;
 		for (auto & tp : tev->touchPoints()) {
-			qDebug() << tp.id() << ", " << tp.pos();
+			centerNow += tp.pos();
+			centerLast += tp.lastPos();
 		}
+		centerNow /= tev->touchPoints().length();
+		centerLast /= tev->touchPoints().length();
+		
+		qDebug() << "Touch Center:" << centerNow << "Last:" << centerLast; 
+		QPointF centerDelta = centerNow - centerLast;
+		
+		this->viewOffset.rx() += centerDelta.x();
+		this->viewOffset.ry() += centerDelta.y();
+		this->calculateView();
+		
 	}
 	
 	return QWidget::event(ev);
