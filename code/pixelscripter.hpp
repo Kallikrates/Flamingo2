@@ -58,8 +58,8 @@ private:
 	proc_image_mode_func proc_image_mode = nullptr;
 	proc_line_mode_func proc_line_mode = nullptr;
 	proc_pixel_mode_func proc_pixel_mode = nullptr;
-	void * tcc_state = nullptr;
-	rwmutex tcc_mut, proc_mut;
+	void * ps_state = nullptr;
+	rwmutex ps_mut, proc_mut;
 	std::thread * chk_thr;
 	std::atomic_bool chk_thr_go {true};
 	void chk_thr_run();

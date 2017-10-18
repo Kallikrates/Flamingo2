@@ -1,9 +1,35 @@
 #include "pixelscripter.hpp"
 
 #include <QGridLayout>
+#include <QFile>
+#include <QDir>
 
 #include <dlfcn.h>
 #include <libtcc.h>
+
+static std::string system_exec(char const * cmd) {
+	char buffer [128];
+    std::string result;
+    std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) throw std::runtime_error("popen() failed!");
+    while (!feof(pipe.get())) {
+        if (fgets(buffer, 128, pipe.get()) != nullptr)
+            result += buffer;
+    }
+    return result;
+}
+
+static std::string randomString(size_t length) {
+	
+	char const * chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+   std::string ret;
+   for(int i = 0; i < length; i++)
+   {
+       int index = qrand() % strlen(chars);
+       ret += chars[index];
+   }
+   return ret;
+}
 
 static char const * const template_src =
 		"//you should complete only one function below, and you should remove the other ones.\n"
@@ -69,11 +95,6 @@ void CSyntaxHighlighter::highlightBlock(QString const & text) {
     }
 }
 
-static void tcc_err(void * opaque, char const * msg) {
-	PixelScripter * ps = reinterpret_cast<PixelScripter *>(opaque);
-	ps->internal_err_msg = msg;
-}
-
 PixelScripter::PixelScripter(QWidget * parent) : QWidget(parent) {
 	
 	QFont font;
@@ -114,7 +135,7 @@ PixelScripter::PixelScripter(QWidget * parent) : QWidget(parent) {
 PixelScripter::~PixelScripter() {
 	chk_thr_go.store(false);
 	delete testpb;
-	if (tcc_state) tcc_delete(reinterpret_cast<TCCState *>(tcc_state));
+	if (ps_state) dlclose(ps_state);
 }
 
 void PixelScripter::keyPressEvent(QKeyEvent * QKE) {
@@ -135,43 +156,60 @@ void PixelScripter::setEditorText(QString text, bool compile) {
 	} else {
 		tedit->setText(text);
 	}
-	tcc_mut.write_unlock();
+	ps_mut.write_unlock();
 	if (compile) this->compile_src();
 }
 
 void PixelScripter::compile_src() {
 	
-	tcc_mut.write_lock();
+	ps_mut.write_lock();
 	
-	QByteArray q_src = tedit->document()->toPlainText().toLatin1();
-	char const * src = q_src.data();
+	system_exec("mkdir -p ~/.local/share/flamingo2");
+	QString source_str = tedit->document()->toPlainText();
+	QFile src_file {QDir::homePath() + "/.local/share/flamingo2/ps.cc"};
+	src_file.open(QIODevice::WriteOnly | QIODevice::Truncate);
+	src_file.write(source_str.toLatin1());
+	src_file.close();
 	
-	TCCState * new_state = tcc_new();
-	tcc_set_error_func(new_state, this, tcc_err);
+	std::string randomFileName = randomString(16);
 	
-	if (tcc_compile_string(new_state, src) != -1) {
-		tcc_relocate(new_state, TCC_RELOCATE_AUTO);
-		auto nproc_image_mode = reinterpret_cast<proc_image_mode_func>(tcc_get_symbol(new_state, "image_mode"));
-		auto nproc_line_mode = reinterpret_cast<proc_line_mode_func>(tcc_get_symbol(new_state, "line_mode"));
-		auto nproc_pixel_mode = reinterpret_cast<proc_pixel_mode_func>(tcc_get_symbol(new_state, "pixel_mode"));
+	std::string complog = system_exec(("gcc -o ~/.local/share/flamingo2/" + randomFileName + ".so -Wall -Wextra -Wpedantic -Ofast -std=c++17 -march=native -mtune=native -shared ~/.local/share/flamingo2/ps.cc 2>&1").c_str());
+	void * ps_handle = dlopen((QDir::homePath() + "/.local/share/flamingo2/" + QString::fromStdString(randomFileName) + ".so").toStdString().c_str(), RTLD_NOW);
+	
+	system_exec(("rm ~/.local/share/flamingo2/" + randomFileName + ".so").c_str());
+	
+	if (!ps_handle) {
+		complog += "\nCompilation Failed!";
+		complog += "\n" + std::string(dlerror());
+	} else {
+		auto nproc_image_mode = reinterpret_cast<proc_image_mode_func>(dlsym(ps_handle, "image_mode"));
+		auto nproc_line_mode = reinterpret_cast<proc_line_mode_func>(dlsym(ps_handle, "line_mode"));
+		auto nproc_pixel_mode = reinterpret_cast<proc_pixel_mode_func>(dlsym(ps_handle, "pixel_mode"));
 		if (!nproc_image_mode && !nproc_line_mode && !nproc_pixel_mode) {
-			comp_stat->setText("Compilation succeeded, but no valid entry point was found... did you read the default text?");
-			tcc_delete(new_state);
+			complog += "\nCompilation succeeded, but no valid entry point was found.";
 		} else {
-			comp_stat->setText("Compilation Success!");
 			proc_image_mode = nproc_image_mode;
 			proc_line_mode = nproc_line_mode;
 			proc_pixel_mode = nproc_pixel_mode;
-			if (tcc_state) tcc_delete(reinterpret_cast<TCCState *>(tcc_state));
-			tcc_state = new_state;
+			
+			std::string using_mode;
+			if (proc_image_mode) {
+				using_mode = "Image";
+			} else if (proc_line_mode) {
+				using_mode = "Line";
+			} else if (proc_pixel_mode) {
+				using_mode = "Pixel";
+			}
+			
+			complog += "\nCompilation Success! Using " + using_mode + " mode.";
+
+			if (ps_state) dlclose(ps_state);
+			ps_state = ps_handle;
 			emit compilation_success();
 		}
-	} else {
-		comp_stat->setText("Compilation FAILED!\nTCC Error Log:\n" + internal_err_msg);
-		tcc_delete(new_state);
 	}
-	
-	tcc_mut.write_unlock();
+	ps_mut.write_unlock();
+	comp_stat->setText(QString::fromStdString(complog));
 }
 
 void PixelScripter::chk_thr_run() {
@@ -184,7 +222,7 @@ void PixelScripter::chk_thr_run() {
 			proc_mut.write_unlock();
 			QImage tImg = {fImg.size(), QImage::Format_ARGB32};
 			
-			tcc_mut.read_lock();
+			ps_mut.read_lock();
 			
 			if (proc_image_mode) {
 				unsigned int * * fDat, * * tDat;
@@ -209,7 +247,7 @@ void PixelScripter::chk_thr_run() {
 				tImg = fImg;
 			}
 			
-			tcc_mut.read_unlock();
+			ps_mut.read_unlock();
 			emit process_complete(tImg, chk_thr_name);
 			
 		} else {

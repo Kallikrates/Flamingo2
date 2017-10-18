@@ -40,7 +40,7 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 	
 	QCollator col;
     col.setNumericMode(true);
-    col.setCaseSensitivity(Qt::CaseInsensitive);
+    col.setCaseSensitivity(Qt::CaseSensitive);
 	
 	for (ProviderArg const & arg : args.getArgs()) {
 		if (arg.path.isDir()) {
