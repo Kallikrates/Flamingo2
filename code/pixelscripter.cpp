@@ -5,7 +5,6 @@
 #include <QDir>
 
 #include <dlfcn.h>
-#include <libtcc.h>
 
 static std::string system_exec(char const * cmd) {
 	char buffer [128];
