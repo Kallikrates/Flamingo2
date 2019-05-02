@@ -40,7 +40,7 @@ public:
 	void setEditorText(QString text, bool compile);
 	QString getEditorText() { return tedit->toPlainText(); }
 protected:
-	SanePushButton * testpb = nullptr;
+	QPushButton * testpb = nullptr;
 	CSyntaxHighlighter * syn = nullptr;
 	QTextDocument * doc = nullptr;
 	QTextEdit * tedit = nullptr;

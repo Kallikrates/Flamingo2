@@ -29,9 +29,9 @@ protected:
 private:
 	QGridLayout * overlayout = nullptr;
 	QTabWidget * tabs = nullptr;
-	SanePushButton * bCancel = nullptr;
-	SanePushButton * bApply = nullptr;
-	SanePushButton * bOk = nullptr;
+	QPushButton * bCancel = nullptr;
+	QPushButton * bApply = nullptr;
+	QPushButton * bOk = nullptr;
 
 	//Slideshow
 	int slideshowTabIndex = 0;

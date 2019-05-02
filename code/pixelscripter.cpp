@@ -136,8 +136,8 @@ PixelScripter::PixelScripter(QWidget * parent) : QWidget(parent) {
 	tedit->setTabStopWidth(2 * metrics.width(' '));
 	tedit->setText(template_src);
 	
-	testpb = new SanePushButton("Compile", this);
-	connect(testpb, SIGNAL(used()), this, SLOT(compile_src()));
+	testpb = new QPushButton("Compile", this);
+	connect(testpb, SIGNAL(clicked()), this, SLOT(compile_src()));
 	comp_stat = new QTextEdit(this);
 	comp_stat->setReadOnly(true);
 	comp_stat->setMaximumHeight(100);
