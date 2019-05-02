@@ -7,7 +7,7 @@ static const QImage nullImg {0, 0, QImage::Format_Mono};
 inline void PreloadingWeightedCategoryImageProvider::providerArgDirRecursor(QDir from, QList<QString> & paths, int max_depth, int cur_depth, QCollator & col) {
 	if (max_depth >= 0 && cur_depth >= max_depth) return;
 	QFileInfoList qfil = from.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
-	qSort(qfil.begin(), qfil.end(), [&](QFileInfo const & a, QFileInfo const & b){return col.compare(a.canonicalFilePath(), b.canonicalFilePath()) < 0;});
+	qSort(qfil.begin(), qfil.end(), [&](QFileInfo const & a, QFileInfo const & b){return col.compare(a.canonicalPath() + QDir::separator() + a.completeBaseName(), b.canonicalPath() + QDir::separator() + b.completeBaseName()) < 0;});
 	for (QFileInfo fi : qfil) {
 		if (fi.isFile()) paths.append(fi.canonicalFilePath());
 		else providerArgDirRecursor(QDir(fi.canonicalFilePath()), paths, max_depth, cur_depth + 1, col);
@@ -41,6 +41,7 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 	QCollator col;
     col.setNumericMode(true);
     col.setCaseSensitivity(Qt::CaseSensitive);
+	col.setIgnorePunctuation(false);
 	
 	for (ProviderArg const & arg : args.getArgs()) {
 		if (arg.path.isDir()) {
@@ -48,7 +49,7 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 			case Recurse::NoRecur:
 			{
 				QFileInfoList qfil = QDir(arg.path.canonicalFilePath()).entryInfoList(QDir::Files);
-				qSort(qfil.begin(), qfil.end(), [&](QFileInfo const & a, QFileInfo const & b){return col.compare(a.canonicalFilePath(), b.canonicalFilePath()) < 0;});
+				qSort(qfil.begin(), qfil.end(), [&](QFileInfo const & a, QFileInfo const & b){return col.compare(a.completeBaseName(), b.completeBaseName()) < 0;});
 				QList<std::shared_ptr<ImgEntry>> imgs;
 				for (QFileInfo & fi : qfil) {
 					imgs.append(std::shared_ptr<ImgEntry> (new ImgEntry {fi.canonicalFilePath(), nullImg}));
@@ -101,7 +102,15 @@ void PreloadingWeightedCategoryImageProvider::SetProviderArguments(ProviderArgs 
 
 static const QString nullStr {};
 
-QString const & PreloadingWeightedCategoryImageProvider::CurrentName() {
+QString PreloadingWeightedCategoryImageProvider::CurrentName() {
+	indexLock.lock();
+	if (cats.length() == 0) return nullStr;
+	QString str = QFileInfo {getCurrentEntry()->path} .fileName();
+	indexLock.unlock();
+	return str;
+}
+
+QString const & PreloadingWeightedCategoryImageProvider::CurrentPath() {
 	indexLock.lock();
 	if (cats.length() == 0) return nullStr;
 	QString const & str = getCurrentEntry()->path;

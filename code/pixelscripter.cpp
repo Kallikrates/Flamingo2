@@ -22,7 +22,7 @@ static std::string randomString(size_t length) {
 	
 	char const * chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
    std::string ret;
-   for(int i = 0; i < length; i++)
+   for(size_t i = 0; i < length; i++)
    {
        int index = qrand() % strlen(chars);
        ret += chars[index];
@@ -30,16 +30,44 @@ static std::string randomString(size_t length) {
    return ret;
 }
 
-static char const * const template_src =
-		"//you should complete only one function below, and you should remove the other ones.\n"
-		"//the highest function available will be used (first image_mode, then line_mode, then pixel_mode)\n"
-		"//all pixels are in 0xBBGGRRAA format\n\n"
-		"//image_mode: complete control over the output image, but no parallelism.\n"
-		"void image_mode(unsigned int * * pixels_in, unsigned int * * pixels_out, int width, int height) {\n\n}\n\n"
-		"//line_mode: will utilize multithreading.\n"
-		"void line_mode(unsigned int * pixels_in, unsigned int * pixels_out, int y, int width, int height) {\n\n}\n\n"
-		"//pixel_mode: will utilize multithreading, more straightforward than line_mode, but more overhead.\n"
-		"unsigned int pixel_mode(unsigned int pixel_in, int x, int y, int width, int height) {\n\n}\n\n";
+static char const * const template_src = 
+R"(//all pixels are in 0xAARRGGBB format
+
+#include <cstdint>
+	
+struct pixel {
+	
+	uint8_t a, r, g, b;
+
+	constexpr pixel() : a {0}, r {0}, g {0}, b {0} {}
+	constexpr pixel(uint8_t a, uint8_t r, uint8_t g, uint8_t b) : a {a}, r {r}, g {g}, b {b} {}
+	constexpr pixel(uint32_t px) :
+	a { static_cast<uint8_t>((px & 0xFF000000) >> 24) },
+	r { static_cast<uint8_t>((px & 0x00FF0000) >> 16) },
+	g { static_cast<uint8_t>((px & 0x0000FF00) >> 8) },
+	b { static_cast<uint8_t>(px & 0x000000FF)}
+	{}
+	
+	constexpr uint32_t assemble() {
+		return b + (g << 8) + (r << 16) + (a << 24);
+	}
+};
+
+static inline pixel proc_pixel(pixel const & in) {
+	pixel out;
+	out.a = in.a;
+	out.r = in.r;
+	out.g = in.g * 0.6;
+	out.b = in.b * 0.8;
+	return out;
+}
+
+extern "C" void ps_proc ( uint32_t const * const * img_in, uint32_t * * img_out, int width, int height ) {
+	for (int line = 0; line < height; line++) for ( int x = 0; x < width; x++ ) {
+		img_out[line][x] = proc_pixel(img_in[line][x]).assemble();
+	} 
+}
+)";
 
 CSyntaxHighlighter::CSyntaxHighlighter::CSyntaxHighlighter(QTextDocument* doc) : QSyntaxHighlighter(doc) {
 	CHighlightRule rule {};
@@ -143,7 +171,7 @@ void PixelScripter::keyPressEvent(QKeyEvent * QKE) {
 
 void PixelScripter::set_process(QImage img_in, QString name) {
 	proc_mut.write_lock();
-	proc_image = img_in;
+	proc_image = img_in.convertToFormat(QImage::Format_ARGB32, Qt::AutoColor);
 	proc_name = name;
 	proc_new = true;
 	proc_mut.write_unlock();
@@ -181,26 +209,13 @@ void PixelScripter::compile_src() {
 		complog += "\nCompilation Failed!";
 		complog += "\n" + std::string(dlerror());
 	} else {
-		auto nproc_image_mode = reinterpret_cast<proc_image_mode_func>(dlsym(ps_handle, "image_mode"));
-		auto nproc_line_mode = reinterpret_cast<proc_line_mode_func>(dlsym(ps_handle, "line_mode"));
-		auto nproc_pixel_mode = reinterpret_cast<proc_pixel_mode_func>(dlsym(ps_handle, "pixel_mode"));
-		if (!nproc_image_mode && !nproc_line_mode && !nproc_pixel_mode) {
-			complog += "\nCompilation succeeded, but no valid entry point was found.";
+		auto ps_proc_sym_temp = reinterpret_cast<ps_proc>(dlsym(ps_handle, "ps_proc"));
+		if (!ps_proc_sym_temp) {
+			complog += "\nCompilation succeeded, but could not find required symbol \"ps_proc\".";
 		} else {
-			proc_image_mode = nproc_image_mode;
-			proc_line_mode = nproc_line_mode;
-			proc_pixel_mode = nproc_pixel_mode;
+			ps_proc_sym = ps_proc_sym_temp;
 			
-			std::string using_mode;
-			if (proc_image_mode) {
-				using_mode = "Image";
-			} else if (proc_line_mode) {
-				using_mode = "Line";
-			} else if (proc_pixel_mode) {
-				using_mode = "Pixel";
-			}
-			
-			complog += "\nCompilation Success! Using " + using_mode + " mode.";
+			complog += "\nCompilation Successful!";
 
 			if (ps_state) dlclose(ps_state);
 			ps_state = ps_handle;
@@ -223,25 +238,15 @@ void PixelScripter::chk_thr_run() {
 			
 			ps_mut.read_lock();
 			
-			if (proc_image_mode) {
-				unsigned int * * fDat, * * tDat;
-				fDat = new unsigned int * [fImg.height()];
-				tDat = new unsigned int * [fImg.height()];
+			if (ps_proc_sym) {
+				std::vector<uint32_t *> fDat, tDat;
+				fDat.resize(fImg.height());
+				tDat.resize(fImg.height());
 				for (int i = 0; i < fImg.height(); i++) {
-					fDat[i] = reinterpret_cast<unsigned int *>(fImg.scanLine(i));
-					tDat[i] = reinterpret_cast<unsigned int *>(tImg.scanLine(i));
+					fDat[i] = reinterpret_cast<uint32_t *>(fImg.scanLine(i));
+					tDat[i] = reinterpret_cast<uint32_t *>(tImg.scanLine(i));
 				}
-				proc_image_mode(fDat, tDat, fImg.width(), fImg.height());
-			} else if (proc_line_mode) {
-				for (int i = 0; i < fImg.height(); i++) {
-					proc_line_mode(reinterpret_cast<unsigned int *>(fImg.scanLine(i)), reinterpret_cast<unsigned int *>(tImg.scanLine(i)), i, fImg.width(), fImg.height());
-				}
-			} else if (proc_pixel_mode) {
-				for (int y = 0; y < fImg.height(); y++) {
-					for (int x = 0; x < fImg.width(); x++) {
-						tImg.setPixel(x, y, proc_pixel_mode(fImg.pixel(x, y), x, y, fImg.width(), fImg.height()));
-					}
-				}
+				ps_proc_sym(fDat.data(), tDat.data(), fImg.width(), fImg.height());
 			} else {
 				tImg = fImg;
 			}

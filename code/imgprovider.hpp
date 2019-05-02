@@ -19,7 +19,8 @@ signals:
 	void Loaded(QImage);
 public:
 	virtual ~AsyncImageProvider() {}
-	virtual QString const & CurrentName() = 0;
+	virtual QString CurrentName() = 0;
+	virtual QString const & CurrentPath() = 0;
 	virtual void SetProviderArguments(ProviderArgs const & args) = 0;
 public slots:
 	virtual void Current() = 0;
@@ -36,7 +37,8 @@ class PreloadingWeightedCategoryImageProvider : public AsyncImageProvider {
 public:
 	PreloadingWeightedCategoryImageProvider();
 	virtual ~PreloadingWeightedCategoryImageProvider();
-	virtual QString const & CurrentName();
+	virtual QString CurrentName();
+	virtual QString const & CurrentPath();
 	virtual void SetProviderArguments(ProviderArgs const & args);
 public slots:
 	virtual void Current();

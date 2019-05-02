@@ -26,6 +26,7 @@ public:
 	QImage getImage() {return view;}
 	QImage getImageOfView();
 	ZKEEP getKeepState() {return keep;}
+	std::atomic_bool bilGood {true};
 public slots:
 	void setImage(QImage, ZKEEP keepStart = KEEP_FIT);
 	void setKeepState(ZKEEP z) {keep = z; this->update();}
@@ -56,7 +57,6 @@ private: //Methods
 	void calculateZoomLevels();
 	void calculateView();
 private: //Bilinear
-	std::atomic_bool bilGood {true};
 	std::thread * bilWorker = nullptr;
 	rwmutex viewLock;
 	rwmutex drawLock;

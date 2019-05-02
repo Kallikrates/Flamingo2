@@ -98,7 +98,7 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		provider->Random();
 		break;
 	case Qt::Key_Delete: {
-		QString cur = provider->CurrentName();
+		QString cur = provider->CurrentPath();
 		if (QMessageBox::warning(this, "Delete?", QString("%1\n\nThis image will be HARD deleted, it will not go to any sort of trash bin. Proceed?").arg(cur), QMessageBox::Yes|QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes) {
 			QFile(cur).remove();
 			over->setFlicker(Overlayer::Flicker::Load, true);
@@ -123,6 +123,14 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		pixscr->show();
 		}
 		break;
+	case Qt::Key_B: {
+			this->view->bilGood.store(!this->view->bilGood);
+			if (this->view->bilGood) {
+				over->setNotification("Bilinear Sampling Enabled");
+			} else {
+				over->setNotification("Bilinear Sampling Disabled");
+			}
+		} break;
 	case Qt::Key_S:
 		if (slideshowActive) {
 			slideshowActive.store(false);
@@ -175,7 +183,7 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		break;
 	case Qt::Key_V: {
 		QImage img = view->getImageOfView();
-		QString loc = QFileDialog::getSaveFileName(this, "Save Image View", QString("f2view_") + QFileInfo(provider->CurrentName()).fileName(), tr("JPEG Image (*.jpg);;Portable Network Graphics (*.png)"));
+		QString loc = QFileDialog::getSaveFileName(this, "Save Image View", QString("f2view_") + provider->CurrentName(), tr("JPEG Image (*.jpg);;Portable Network Graphics (*.png)"));
 		if (!loc.isEmpty()) {
 			img.save(loc, nullptr, 95);
 		}
@@ -226,7 +234,7 @@ void MainWindow::handleImage(QImage img) {
 	this->setWindowTitle("f2: "+provider->CurrentName());
 	over->setFlicker(Overlayer::Flicker::Load, false);
 	if (options.use_ps) {
-		pixscr->set_process(img, provider->CurrentName());
+		pixscr->set_process(img, provider->CurrentPath());
 		over->setFlicker(Overlayer::Flicker::PixelScript, true);
 	} else {
 		view->setImage(img, options.viewKeep);
@@ -271,7 +279,7 @@ void MainWindow::handleOptionsApplied() {
 }
 
 void MainWindow::handlePixScrProcComplete(QImage img, QString str) {
-	if (provider->CurrentName() == str) {
+	if (provider->CurrentPath() == str) {
 		over->setFlicker(Overlayer::Flicker::PixelScript, false);
 		view->setImage(img, options.viewKeep);
 	}

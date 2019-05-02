@@ -52,12 +52,8 @@ protected:
 protected slots:
 	void compile_src();
 private:
-	typedef void(*proc_image_mode_func)(unsigned int * *, unsigned int * *, int, int );
-	typedef void (*proc_line_mode_func)(unsigned int *, unsigned int *, int, int, int);
-	typedef unsigned int (*proc_pixel_mode_func)(unsigned int, int, int, int, int);
-	proc_image_mode_func proc_image_mode = nullptr;
-	proc_line_mode_func proc_line_mode = nullptr;
-	proc_pixel_mode_func proc_pixel_mode = nullptr;
+	typedef void(*ps_proc)(uint32_t * *, uint32_t * *, int, int );
+	ps_proc ps_proc_sym = nullptr;
 	void * ps_state = nullptr;
 	rwmutex ps_mut, proc_mut;
 	std::thread * chk_thr;
