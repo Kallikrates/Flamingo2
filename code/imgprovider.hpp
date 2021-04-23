@@ -53,7 +53,7 @@ protected:
 	struct CatEntry {QString catname; float weight; QList<std::shared_ptr<ImgEntry>> entries;};
 	enum class Navdir {Neutral, Forward, Backward, Random};
 	unsigned int maxThreads = std::thread::hardware_concurrency();
-	unsigned int numPreload = 5;
+	unsigned int numPreload = 7;
 	inline std::shared_ptr<ImgEntry> getCurrentEntry();
 	void validateRandom();
 	bool indexIsValid(unsigned int, unsigned int);

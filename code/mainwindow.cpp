@@ -19,8 +19,16 @@ MainWindow::MainWindow(QStringList arguments) : QWidget(0) {
 	QObject::connect(pixscr, SIGNAL(process_complete(QImage, QString)), this, SLOT(handlePixScrProcComplete(QImage, QString)));
 	layout->addWidget(view, 0, 0, 1, 1);
 	layout->addWidget(over, 0, 0, 1, 1);
+	
 	QObject::connect(view, SIGNAL(bilProc()), this, SLOT(handleBilProc()));
 	QObject::connect(view, SIGNAL(bilComplete()), this, SLOT(handleBilComp()));
+	QObject::connect(view, &ImageView::resized, this, [this] (QSize size) {
+		over->setNotification(QString("%1x%2").arg(
+			QString::number(size.width()),
+			QString::number(size.height())
+		));
+	});
+	
 	opwin = new OptionsWindow(options, 0);
 	QObject::connect(opwin, SIGNAL(applied()), this, SLOT(handleOptionsApplied()));
 	provider = new PreloadingWeightedCategoryImageProvider();
@@ -185,7 +193,7 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		QImage img = view->getImageOfView();
 		QString loc = QFileDialog::getSaveFileName(this, "Save Image View", QString("f2view_") + provider->CurrentName(), tr("JPEG Image (*.jpg);;Portable Network Graphics (*.png)"));
 		if (!loc.isEmpty()) {
-			img.save(loc, nullptr, 95);
+			img.save(loc, nullptr, 98);
 		}
 		break;
 	}
@@ -287,4 +295,8 @@ void MainWindow::handlePixScrProcComplete(QImage img, QString str) {
 
 void MainWindow::handlePixScrCompilation() {
 	if (options.use_ps) provider->Current();
+	
+	settings.beginGroup("PixelScript");
+	settings.setValue("saved_script", pixscr->getEditorText());
+	settings.endGroup();
 }

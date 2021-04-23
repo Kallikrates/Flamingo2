@@ -53,6 +53,7 @@ void ImageView::paintEvent(QPaintEvent *QPE) {
 void ImageView::resizeEvent(QResizeEvent *QRE) {
 	this->calculateZoomLevels();
 	QWidget::resizeEvent(QRE);
+	emit resized(QRE->size());
 }
 
 void ImageView::wheelEvent(QWheelEvent *QWE) {

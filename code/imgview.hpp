@@ -66,6 +66,7 @@ private: //Bilinear
 	QImage bilRaster;
 	void bilRun();
 signals:
+	void resized(QSize);
 	void bilComplete();
 	void bilProc();
 };

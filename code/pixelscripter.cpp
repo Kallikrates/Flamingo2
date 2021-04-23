@@ -129,11 +129,10 @@ PixelScripter::PixelScripter(QWidget * parent) : QWidget(parent) {
 	font.setFamily("DejaVu Sans Mono");
 	font.setFixedPitch(true);
 	font.setPointSize(8);
-	QFontMetrics metrics(font);
 	
 	tedit = new QTextEdit(this);
 	tedit->setFont(font);
-	tedit->setTabStopWidth(2 * metrics.width(' '));
+	tedit->setTabStopDistance(2 * tedit->fontMetrics().horizontalAdvance(' '));
 	tedit->setText(template_src);
 	
 	testpb = new QPushButton("Compile", this);

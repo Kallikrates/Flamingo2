@@ -4,6 +4,7 @@
 Core::Core(int &argc, char **&argv) : QApplication(argc, argv) {
 	QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
 
+	qDebug() << QImageReader::supportedImageFormats();
 	window = new MainWindow(this->arguments());
 	window->show();
 }
