@@ -8,6 +8,8 @@
 #include <QColorSpace>
 
 void set_wallpaper(QImage img) {
+	// BROKEN LOL
+	/*
 	QProcess awesome_1, awesome_2;
 	awesome_1.start("dbus-send --dest=org.awesomewm.awful --type=method_call --print-reply / org.awesomewm.awful.Remote.Eval string:\"coords = mouse.coords()\"");
 	awesome_1.waitForFinished();
@@ -24,4 +26,5 @@ void set_wallpaper(QImage img) {
 	awesome_2.start(QString("dbus-send --dest=org.awesomewm.awful --type=method_call --print-reply / org.awesomewm.awful.Remote.Eval string:\"local awful = require('awful') \n local gears = require('gears') \n gears.wallpaper.fit('") + img_tmp.fileName() + "', awful.screen.getbycoord(coords.x, coords.y), false)\"");
 	awesome_2.waitForFinished();
 	qDebug() << awesome_2.readAllStandardOutput() << awesome_2.readAllStandardError();
+	*/
 }

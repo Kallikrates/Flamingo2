@@ -1,6 +1,8 @@
 #include "core.hpp"
 #include "mainwindow.hpp"
 
+#include <QTextCodec>
+
 Core::Core(int &argc, char **&argv) : QApplication(argc, argv) {
 	QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
 
@@ -14,7 +16,6 @@ Core::~Core() {
 }
 
 int main (int argc, char * * argv) {
-	qsrand(time(NULL));
 	Core C {argc, argv};
 	return C.exec();
 }

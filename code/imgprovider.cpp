@@ -234,6 +234,7 @@ void PreloadingWeightedCategoryImageProvider::Seek(QString name) {
 void PreloadingWeightedCategoryImageProvider::loadrun(IETL * me) {
 	std::shared_ptr<ImgEntry> entry = me->entry;
 	QImageReader reader {entry->path};
+	reader.setAllocationLimit(4096);
 	reader.setDecideFormatFromContent(true);
 	if (!reader.canRead()) {
 		qDebug() << "Does not appear to be an image:" << entry->path;
@@ -298,11 +299,11 @@ inline PreloadingWeightedCategoryImageProvider::PreloadSet PreloadingWeightedCat
 	if (cats.length() == 0) return {0, 0};
 	unsigned int cdx = 0;
 	if (cats.length() > 1) {
-		float sum = 0.0f;
+		double sum = 0.0f;
 		for (CatEntry & cat : cats) {
 			sum += cat.weight;
 		}
-		float value = (QRandomGenerator::global()->generate() / (float)RAND_MAX) * sum;
+		double value = QRandomGenerator::global()->generateDouble() * sum;
 		cdx = cats.length();
 		while (value > 0 && --cdx > 0) {
 			value -= cats[cdx].weight;

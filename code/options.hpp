@@ -6,12 +6,20 @@
 
 enum class SlideshowDirection {Forward, Backward, Random};
 struct Options {
+	// Slideshow
 	std::chrono::milliseconds slideshowInterval {1000};
 	SlideshowDirection slideshowDir {SlideshowDirection::Random};
 	ImageView::ZKEEP viewKeep {ImageView::KEEP_FIT_FORCE};
+	
+	// PixelScript
+	bool use_ps;
+	
+	// ViewSave
+	bool UUIDAutoSave;
+	QString UUIDAutoSaveDir;
+	
 	void writeSetttings(QSettings &) const;
 	void readSettings(QSettings const &);
-	bool use_ps;
 };
 
 class OptionsWindow : public QWidget {
@@ -33,16 +41,22 @@ private:
 	QPushButton * bApply = nullptr;
 	QPushButton * bOk = nullptr;
 
-	//Slideshow
+	// Slideshow
 	int slideshowTabIndex = 0;
 	QWidget * slideshowTabWidget = nullptr;
 	QSpinBox * slideshowIntervalSpinbox = nullptr;
 	QComboBox * slideshowZoomCBox = nullptr;
 	
-	//PixelScript
+	// PixelScript
 	int psTabIndex = 0;
 	QWidget * psTabWidget = nullptr;
 	QCheckBox * psCheckbox = nullptr;
+	
+	// ViewSave
+	int vsTabIndex = 0;
+	QWidget * vsTabWidget = nullptr;
+	QLineEdit * vsUUIDAutoSaveDirLE = nullptr;
+	QCheckBox * vsUUIDAutoSaveCBox = nullptr;
 private slots:
 	void internalApply();
 };

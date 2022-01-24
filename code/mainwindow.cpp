@@ -4,13 +4,15 @@
 #include "wallp.hpp"
 #include "pixelscripter.hpp"
 
+#include <QUuid>
+
 MainWindow::MainWindow(QStringList arguments) : QWidget(0) {
 	settings.beginGroup("Options");
 	options.readSettings(settings);
 	settings.endGroup();
 
 	layout = new QGridLayout(this);
-	layout->setMargin(0);
+	layout->setContentsMargins(0, 0, 0, 0);
 	view = new ImageView(this);
 	over = new Overlayer(this);
 	over->setFlicker(Overlayer::Flicker::Load, true);
@@ -191,15 +193,34 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		break;
 	case Qt::Key_V: {
 		QImage img = view->getImageOfView();
-		QString loc = QFileDialog::getSaveFileName(this, "Save Image View", QString("f2view_") + provider->CurrentName(), tr("JPEG Image (*.jpg);;Portable Network Graphics (*.png)"));
-		if (!loc.isEmpty()) {
-			img.save(loc, nullptr, 98);
+		if (options.UUIDAutoSave) {
+			QString loc = options.UUIDAutoSaveDir + QDir::separator() + QUuid::createUuid().toString(QUuid::WithoutBraces) + ".png";
+			img.save(loc, "PNG");
+			over->setNotification(loc);
+		} else {
+			QString loc = QFileDialog::getSaveFileName(this, "Save Image View", QString("f2view_") + provider->CurrentName(), tr("JPEG Image (*.jpg);;Portable Network Graphics (*.png)"));
+			if (!loc.isEmpty()) {
+				img.save(loc, nullptr, 98);
+			}
 		}
 		break;
 	}
 	case Qt::Key_W: {
 		QImage img = view->getImageOfView();
 		set_wallpaper(img);
+		break;
+	}
+	case Qt::Key_R: {
+		bool ok;
+		int w, h;
+		w = QInputDialog::getInt(this, "Width", "Width:", width(), 1, 65536, 1, &ok);
+		if (ok) h = QInputDialog::getInt(this, "Height", "Height:", height(), 1, 65536, 1, &ok);
+		if (ok) {
+			QRect geo = geometry();
+			geo.setWidth(w);
+			geo.setHeight(h);
+			setGeometry(geo);
+		}
 		break;
 	}
 	case Qt::Key_1:

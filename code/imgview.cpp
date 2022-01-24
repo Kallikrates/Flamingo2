@@ -57,9 +57,9 @@ void ImageView::resizeEvent(QResizeEvent *QRE) {
 }
 
 void ImageView::wheelEvent(QWheelEvent *QWE) {
-	if (QWE->orientation() == Qt::Vertical) {
+	if (QWE->angleDelta().y()) {
 		QWE->accept();
-		this->setZoom((1.0f - QWE->delta() / 360.0f / 3.0f) * zoom, QPointF(QWE->pos().x() / (float)this->width() , QWE->pos().y() / (float)this->height()));
+		this->setZoom((1.0f - QWE->angleDelta().y() / 360.0f / 3.0f) * zoom, QPointF(QWE->position().x() / (float)this->width() , QWE->position().y() / (float)this->height()));
 		this->update();
 	}
 	QWidget::wheelEvent(QWE);

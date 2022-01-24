@@ -11,6 +11,7 @@
 #include <QTextDocument>
 #include <QTextEdit>
 #include <QImage>
+#include <QRegExp>
 
 class CSyntaxHighlighter : public QSyntaxHighlighter {
 	Q_OBJECT

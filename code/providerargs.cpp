@@ -10,10 +10,10 @@ ProviderArgs::ProviderArgs(QList<QString> inargs) {
 		if (fi.exists()) {
 			QFileInfo dir;
 			if (fi.isFile()) {
-				dir = {fi.canonicalPath()};
+				dir = QFileInfo {fi.canonicalPath()};
 				reqStart = fi.canonicalFilePath();
 			}
-			else dir = {fi.canonicalFilePath()};
+			else dir = QFileInfo {fi.canonicalFilePath()};
 			args.append({dir, Recurse::NoRecur, 1.0f});
 		}
 	} else if (inargs.length() == 0) args.append({QFileInfo(QDir::current().canonicalPath()), Recurse::NoRecur, 1.0f});

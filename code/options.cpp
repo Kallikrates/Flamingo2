@@ -3,13 +3,19 @@
 void Options::readSettings(const QSettings & settings) {
 	this->slideshowInterval = std::chrono::milliseconds(settings.value("slideshowInterval", 5000).toInt());
 	this->viewKeep = (ImageView::ZKEEP)settings.value("slideshowZoomKeep", 1).toInt();
+	
 	this->use_ps = settings.value("usePixelScripts", false).toBool();
+	
+	this->UUIDAutoSave = settings.value("UUIDAutoSave", false).toBool();
+	this->UUIDAutoSaveDir = settings.value("UUIDAutoSaveDir", QDir::currentPath()).toString();
 }
 
 void Options::writeSetttings(QSettings & settings) const {
 	settings.setValue("slideshowInterval", (int)this->slideshowInterval.count());
 	settings.setValue("slideshowZoomKeep", (int)this->viewKeep);
 	settings.setValue("usePixelScripts", this->use_ps);
+	settings.setValue("UUIDAutoSave", this->UUIDAutoSave);
+	settings.setValue("UUIDAutoSaveDir", this->UUIDAutoSaveDir);
 }
 
 OptionsWindow::OptionsWindow(Options opt, QWidget *parent) : QWidget (parent), options(opt) {
@@ -31,7 +37,7 @@ OptionsWindow::OptionsWindow(Options opt, QWidget *parent) : QWidget (parent), o
 	slideshowTabWidget = new QWidget(this);
 	slideshowTabIndex = tabs->addTab(slideshowTabWidget, "Slideshow");
 	QGridLayout * slideshowLayout = new QGridLayout(slideshowTabWidget);
-	slideshowLayout->setMargin(1);
+	//slideshowLayout->setMargin(1);
 	slideshowLayout->setSpacing(1);
 
 	QWidget * slideshowIntervalWidget = new QWidget {slideshowTabWidget};
@@ -69,6 +75,19 @@ OptionsWindow::OptionsWindow(Options opt, QWidget *parent) : QWidget (parent), o
 	psCheckbox->setChecked(opt.use_ps);
 	psLayout->addWidget(psCheckbox, 0, 0);
 	
+	// ViewSave
+	vsTabWidget = new QWidget(this);
+	vsTabIndex = tabs->addTab(vsTabWidget, "ViewSave");
+	QGridLayout * vsLayout = new QGridLayout(vsTabWidget);
+	
+	vsUUIDAutoSaveCBox = new QCheckBox {"Use UUID Autosaving", vsTabWidget};
+	vsUUIDAutoSaveCBox->setChecked(opt.UUIDAutoSave);
+	vsLayout->addWidget(vsUUIDAutoSaveCBox, 0, 0);
+	
+	vsUUIDAutoSaveDirLE = new QLineEdit(vsTabWidget);
+	vsUUIDAutoSaveDirLE->setText(opt.UUIDAutoSaveDir);
+	vsLayout->addWidget(vsUUIDAutoSaveDirLE, 1, 0);
+	
 	this->setWindowFlags(Qt::WindowStaysOnTopHint);
 }
 
@@ -80,6 +99,8 @@ void OptionsWindow::showEvent(QShowEvent * QSE) {
 	if (options.viewKeep) slideshowZoomCBox->setCurrentIndex((int)options.viewKeep - 1);
 	else slideshowZoomCBox->setCurrentIndex(0);
 	psCheckbox->setChecked(options.use_ps);
+	vsUUIDAutoSaveCBox->setChecked(options.UUIDAutoSave);
+	vsUUIDAutoSaveDirLE->setText(options.UUIDAutoSaveDir);
 }
 
 void OptionsWindow::keyPressEvent(QKeyEvent * QKE) {
@@ -94,5 +115,7 @@ void OptionsWindow::internalApply() {
 	options.slideshowInterval = std::chrono::milliseconds(slideshowIntervalSpinbox->value());
 	options.viewKeep = (ImageView::ZKEEP)(slideshowZoomCBox->currentIndex() + 1);
 	options.use_ps = psCheckbox->isChecked();
+	options.UUIDAutoSave = vsUUIDAutoSaveCBox->isChecked();
+	options.UUIDAutoSaveDir = vsUUIDAutoSaveDirLE->text();
 	emit applied();
 }

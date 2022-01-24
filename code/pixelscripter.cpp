@@ -24,7 +24,7 @@ static std::string randomString(size_t length) {
    std::string ret;
    for(size_t i = 0; i < length; i++)
    {
-       int index = qrand() % strlen(chars);
+       int index = QRandomGenerator::global()->bounded(0, (int)strlen(chars) - 1);
        ret += chars[index];
    }
    return ret;
