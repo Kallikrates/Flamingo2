@@ -26,10 +26,10 @@ public:
 	QImage getImage() {return view;}
 	QImage getImageOfView();
 	ZKEEP getKeepState() {return keep;}
-	std::atomic_bool bilGood {true};
 public slots:
 	void setImage(QImage, ZKEEP keepStart = KEEP_FIT);
 	void setKeepState(ZKEEP z) {keep = z; this->update();}
+	void toggleSmooth() { smoothPaint = !smoothPaint; this->update(); }
 protected slots:
 	void centerView();
 private slots:
@@ -39,7 +39,7 @@ private: //Variables
 	QImage view;
 	float zoom = 1.0f;
 	QRect partRect;
-	QRect drawRect;
+	QRectF drawRect;
 	static float constexpr zoomMin = 0.025f;
 	float zoomMax = 0.0f;
 	float zoomExp = 0.0f;
@@ -52,23 +52,13 @@ private: //Variables
 	QPointF focalPoint;
 	QTimer *mouseHider = new QTimer(this);
 	bool touchOverride = false;
+	bool smoothPaint = true;
 private: //Methods
 	void setZoom(qreal, QPointF focus = QPointF(0, 0));
 	void calculateZoomLevels();
 	void calculateView();
-private: //Bilinear
-	std::thread * bilWorker = nullptr;
-	rwmutex viewLock;
-	rwmutex drawLock;
-	QImage bilCompare;
-	QRect bilPart;
-	QRect bilDraw;
-	QImage bilRaster;
-	void bilRun();
 signals:
 	void resized(QSize);
-	void bilComplete();
-	void bilProc();
 };
 
 #endif // IMGVIEW_HPP

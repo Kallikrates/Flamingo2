@@ -28,7 +28,7 @@ file(GLOB ProjectFiles
 )
 source_group("project" FILES ${ProjectFiles})
 
-find_package(Qt6 COMPONENTS Widgets Core5Compat REQUIRED)
+find_package(Qt6 COMPONENTS Widgets Core5Compat DBus REQUIRED)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -38,4 +38,4 @@ set(CMAKE_INSTALL_PREFIX "/usr/local/")
 install(TARGETS ${ProjectBinary} RUNTIME DESTINATION "bin/")
 set_target_properties(${ProjectBinary} PROPERTIES INCLUDE_DIRECTORIES ${ProjectIncludeDirectories})
 set_target_properties(${ProjectBinary} PROPERTIES PROJECT_LABEL "${ProjectName}")
-target_link_libraries(${ProjectBinary} ${ProjectLibs} Qt6::Widgets Qt6::Core5Compat "-ldl")
+target_link_libraries(${ProjectBinary} ${ProjectLibs} Qt6::Widgets Qt6::Core5Compat Qt6::DBus "-ldl")

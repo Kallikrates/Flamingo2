@@ -133,14 +133,6 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		pixscr->show();
 		}
 		break;
-	case Qt::Key_B: {
-			this->view->bilGood.store(!this->view->bilGood);
-			if (this->view->bilGood) {
-				over->setNotification("Bilinear Sampling Enabled");
-			} else {
-				over->setNotification("Bilinear Sampling Disabled");
-			}
-		} break;
 	case Qt::Key_S:
 		if (slideshowActive) {
 			slideshowActive.store(false);
@@ -172,16 +164,6 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 			over->setNotification("Maximized");
 		}
 		break;
-	case Qt::Key_D:
-		if (this->windowFlags() & Qt::WindowStaysOnBottomHint) {
-			this->setWindowFlags(this->windowFlags() & ~Qt::WindowStaysOnBottomHint);
-			over->setNotification("Desktop Mode Disabled");
-		} else {
-			this->setWindowFlags(this->windowFlags() | Qt::WindowStaysOnBottomHint);
-			over->setNotification("Desktop Mode Enabled");
-		}
-		this->show();
-		break;
 	case Qt::Key_I:
 		if (over->getIndicatorsEnabled()) {
 			over->setIndicatorsEnabled(false);
@@ -194,8 +176,8 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 	case Qt::Key_V: {
 		QImage img = view->getImageOfView();
 		if (options.UUIDAutoSave) {
-			QString loc = options.UUIDAutoSaveDir + QDir::separator() + QUuid::createUuid().toString(QUuid::WithoutBraces) + ".png";
-			img.save(loc, "PNG");
+			QString loc = options.UUIDAutoSaveDir + QDir::separator() + QUuid::createUuid().toString(QUuid::WithoutBraces) + ".ppm";
+			img.save(loc, "PPM");
 			over->setNotification(loc);
 		} else {
 			QString loc = QFileDialog::getSaveFileName(this, "Save Image View", QString("f2view_") + provider->CurrentName(), tr("JPEG Image (*.jpg);;Portable Network Graphics (*.png)"));
@@ -214,13 +196,18 @@ void MainWindow::keyPressEvent(QKeyEvent * QKE) {
 		bool ok;
 		int w, h;
 		w = QInputDialog::getInt(this, "Width", "Width:", width(), 1, 65536, 1, &ok);
-		if (ok) h = QInputDialog::getInt(this, "Height", "Height:", height(), 1, 65536, 1, &ok);
-		if (ok) {
-			QRect geo = geometry();
-			geo.setWidth(w);
-			geo.setHeight(h);
-			setGeometry(geo);
+		if (ok) { h = QInputDialog::getInt(this, "Height", "Height:", height(), 1, 65536, 1, &ok);
+			if (ok) {
+				QRect geo = geometry();
+				geo.setWidth(w);
+				geo.setHeight(h);
+				setGeometry(geo);
+			}
 		}
+		break;
+	}
+	case Qt::Key_B: {
+		view->toggleSmooth();
 		break;
 	}
 	case Qt::Key_1:

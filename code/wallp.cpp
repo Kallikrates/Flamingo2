@@ -7,24 +7,34 @@
 #include <QImageWriter>
 #include <QColorSpace>
 
+#include <QtDBus>
+
+char const * wallp_template = R"AWT(
+
+local awful = require('awful')
+local gears = require('gears')
+
+coords = mouse.coords()
+gears.wallpaper.fit('%1', awful.screen.getbycoord(coords.x, coords.y), false)
+	
+)AWT";
+
 void set_wallpaper(QImage img) {
-	// BROKEN LOL
-	/*
-	QProcess awesome_1, awesome_2;
-	awesome_1.start("dbus-send --dest=org.awesomewm.awful --type=method_call --print-reply / org.awesomewm.awful.Remote.Eval string:\"coords = mouse.coords()\"");
-	awesome_1.waitForFinished();
-	qDebug() << awesome_1.readAllStandardOutput() << awesome_1.readAllStandardError();
+	
+	auto iface = new QDBusInterface { "org.awesomewm.awful", "/", "org.awesomewm.awful.Remote", QDBusConnection::sessionBus() };
+	
+	if (!iface->isValid()) {
+		qDebug() << "Failed to open DBus interface for wallpapering.";
+		return;
+	}
+	
 	QTemporaryFile img_tmp {QDir::tempPath()+QDir::separator()+"f2_XXXXXX.bmp"};
 	img_tmp.open();
-	qDebug() << img_tmp.fileName();
 	
 	QImageWriter pngw;
 	pngw.setFormat("BMP");
 	pngw.setDevice(&img_tmp);
 	pngw.write(img);
 	
-	awesome_2.start(QString("dbus-send --dest=org.awesomewm.awful --type=method_call --print-reply / org.awesomewm.awful.Remote.Eval string:\"local awful = require('awful') \n local gears = require('gears') \n gears.wallpaper.fit('") + img_tmp.fileName() + "', awful.screen.getbycoord(coords.x, coords.y), false)\"");
-	awesome_2.waitForFinished();
-	qDebug() << awesome_2.readAllStandardOutput() << awesome_2.readAllStandardError();
-	*/
+	auto msg = iface->call("Eval", QString(wallp_template).arg(img_tmp.fileName()));
 }
